@@ -1,0 +1,162 @@
+/*generado con gemini >:)*/
+/* ---- Reset General ---- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+    background-color: #f8fafc; /* Gris muy claro y limpio */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #1e293b;
+}
+
+/* ---- Navbar Superior ---- */
+.navbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 0;
+    width: 100%;
+}
+
+.nav-container {
+    max-width: 500px; /* Alineado al ancho del login */
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    align-items: center;
+}
+
+.nav-btn {
+    text-decoration: none;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-btn:hover {
+    color: #0f172a;
+}
+
+/* ---- Contenedor Principal ---- */
+.main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+/* ---- Mensajes de Error (Flash) ---- */
+.flash {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ---- Tarjeta de Login Elegante ---- */
+.card-content {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Encabezado del Bloque (Título Iniciar Sesión) */
+.card-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: -0.5px;
+}
+
+/* ---- Formulario e Inputs ---- */
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #0f172a;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+/* Focus azul moderno sutil */
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    outline: none;
+}
+
+/* ---- Botón de Envío Primario ---- */
+input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background-color: #1e293b; /* Color oscuro sofisticado */
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-top: 6px;
+}
+
+input[type="submit"]:hover {
+    background-color: #0f172a;
+}
+
+input[type="submit"]:active {
+    transform: scale(0.99);
+}
