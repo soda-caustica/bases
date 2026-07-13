@@ -4,19 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %} - Flaskr</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style3.css') }}">
 </head>
 <body>
 
   <nav class="navbar">
     <div class="nav-container">
-      <h1 class="logo">Flaskr</h1>
+      <div class="logo-group">
+        <h1 class="logo">Logística Central</h1>
+        <nav class="main-nav">
+          <a href="{{ url_for('index') }}">Dashboard</a>
+          <a href="{{ url_for('logistics.list_orders') }}">Órdenes</a>
+          <a href="{{ url_for('logistics.list_receipts') }}">Facturas</a>
+          <a href="{{ url_for('logistics.list_clients') }}">Clientes</a>
+        </nav>
+      </div>
       <ul class="nav-links">
         {% if g.user %}
-          <li><span class="user-rut">{{ g.user['rut'] }}</span></li>
-          <li><a class="nav-btn logout" href="{{ url_for('auth.logout') }}">Log Out</a></li>
+          <li><span class="user-rut">{{ g.user.name or g.user.rut }}</span></li>
+          <li><a class="nav-btn logout" href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></li>
         {% else %}
-          <li><a class="nav-btn login" href="{{ url_for('auth.login') }}">Log In</a></li>
+          <li><a class="nav-btn login" href="{{ url_for('auth.login') }}">Iniciar Sesión</a></li>
         {% endif %}
       </ul>
     </div>
@@ -33,7 +41,9 @@
         {% block header %}{% endblock %}
       </header>
       
-      {% block content %}{% endblock %}
+      <div class="card-body">
+        {% block content %}{% endblock %}
+      </div>
     </section>
     
   </main>

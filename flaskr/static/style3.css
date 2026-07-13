@@ -1,0 +1,247 @@
+/* ==========================================================================
+   Estilos Base y Tipografía
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f4f6f9;
+  color: #333333;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ==========================================================================
+   Barra de Navegación (Navbar)
+   ========================================================================== */
+.navbar {
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 900; /* Usa el peso máximo de tu Roboto */
+  color: #f97316; /* Naranja corporativo/logístico */
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-rut {
+  font-weight: 500;
+  color: #4b5563;
+  background-color: #f3f4f6;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Botones Login / Logout */
+.nav-btn {
+  font-weight: 500;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-btn.login {
+  background-color: #f97316;
+  color: #ffffff;
+}
+
+.nav-btn.login:hover {
+  background-color: #ea580c;
+}
+
+.nav-btn.logout {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.nav-btn.logout:hover {
+  background-color: #dc2626;
+}
+
+/* ==========================================================================
+   Contenedor Principal y Mensajes Flash
+   ========================================================================== */
+.main-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+/* Mensajes Flash de Flask */
+.flash {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   Tarjeta de Contenido (Card)
+   ========================================================================== */
+.card-content {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 2rem;
+}
+
+.card-header {
+  border-bottom: 2px solid #f3f4f6;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-header h2, 
+.card-header h1 {
+  font-weight: 900;
+  color: #111827;
+  font-size: 1.75rem;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.login-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 0.95rem 1rem;
+  font-size: 1rem;
+  color: #0f172a;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+  outline: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.95rem 1.25rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background-color: #f97316;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: #ea580c;
+}
+
+.btn-secondary {
+  background-color: #ffedd5;
+  color: #9a3412;
+}
+
+.btn-secondary:hover {
+  background-color: #cbd5e1;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.dashboard-card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-card strong {
+  font-size: 2rem;
+  color: #111827;
+}
+
+.card-label,
+.dashboard-section h2 {
+  color: #475569;
+  font-weight: 700;
+}
+
+.dashboard-section {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}

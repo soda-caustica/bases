@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de Orden{% endblock %}
+
+{% block header %}
+  <h1>Detalle de Orden</h1>
+  <p class="subtitle">Información completa de la orden seleccionada.</p>
+{% endblock %}
+
+{% block content %}
+  <div class="detail-grid">
+    <div>
+      <strong>Orden:</strong> {{ order.numero_de_orden }}
+    </div>
+    <div>
+      <strong>Fecha:</strong> {{ order.fecha }}
+    </div>
+    <div>
+      <strong>Estado:</strong> {{ order.estado }}
+    </div>
+    <div>
+      <strong>Cliente:</strong> {{ order.cliente_nombre }}
+    </div>
+    <div>
+      <strong>Correo:</strong> {{ order.cliente_email or '-' }}
+    </div>
+    <div>
+      <strong>Teléfono:</strong> {{ order.cliente_fono or '-' }}
+    </div>
+    <div class="full-width">
+      <strong>Origen:</strong> {{ order.direccion_origen }}
+    </div>
+    <div class="full-width">
+      <strong>Destino:</strong> {{ order.direccion_destino }}
+    </div>
+    <div>
+      <strong>Monto base:</strong> {{ order.monto_base }}
+    </div>
+    <div>
+      <strong>Factura registrada:</strong> {{ 'Sí' if receipt else 'No' }}
+    </div>
+  </div>
+
+  {% if receipt %}
+    <section class="receipt-summary">
+      <h2>Factura asociada</h2>
+      <p><strong>Número:</strong> {{ receipt.numero_de_factura }}</p>
+      <p><strong>Fecha:</strong> {{ receipt.fecha }}</p>
+      <p><strong>Monto:</strong> {{ receipt.monto_total }}</p>
+      <p><strong>Método de pago:</strong> {{ receipt.metodo_de_pago }}</p>
+    </section>
+  {% endif %}
+
+  <div class="button-row">
+    <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">Volver a órdenes</a>
+  </div>
+{% endblock %}

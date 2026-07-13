@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Clientes{% endblock %}
+
+{% block header %}
+  <h1>Clientes</h1>
+  <p class="subtitle">Listado de clientes con su información de contacto.</p>
+{% endblock %}
+
+{% block content %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>RUT</th>
+        <th>Nombre</th>
+        <th>Correo</th>
+        <th>Teléfono</th>
+        <th>Dirección</th>
+        <th>Comuna</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for client in clients %}
+        <tr>
+          <td>{{ client.rut }}</td>
+          <td>{{ client.cliente_nombre }}</td>
+          <td>{{ client.email or '-' }}</td>
+          <td>{{ client.fono or '-' }}</td>
+          <td>{{ client.direccion_residencia }}</td>
+          <td>{{ client.comuna }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6">No hay clientes registrados.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

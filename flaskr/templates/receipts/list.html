@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Facturas{% endblock %}
+
+{% block header %}
+  <h1>Facturas</h1>
+  <p class="subtitle">Todas las facturas registradas para las órdenes.</p>
+{% endblock %}
+
+{% block content %}
+  <div class="button-row">
+    <a class="btn btn-primary" href="{{ url_for('logistics.create_receipt') }}">Registrar factura</a>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Factura</th>
+        <th>Fecha</th>
+        <th>Monto</th>
+        <th>Método</th>
+        <th>Orden</th>
+        <th>Cliente</th>
+        <th>Estado orden</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for receipt in receipts %}
+        <tr>
+          <td>{{ receipt.numero_de_factura }}</td>
+          <td>{{ receipt.fecha }}</td>
+          <td>{{ receipt.monto_total }}</td>
+          <td>{{ receipt.metodo_de_pago }}</td>
+          <td>{{ receipt.numero_de_orden }}</td>
+          <td>{{ receipt.cliente_nombre }}</td>
+          <td>{{ receipt.orden_estado }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="7">No hay facturas registradas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

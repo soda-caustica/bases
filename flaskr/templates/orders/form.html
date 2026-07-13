@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Orden{% endblock %}
+
+{% block header %}
+  <h1>Crear Orden de Retiro</h1>
+  <p class="subtitle">Registra una nueva orden para el cliente seleccionado.</p>
+{% endblock %}
+
+{% block content %}
+  <form method="post" class="entity-form">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="numero_de_orden">Número de orden</label>
+        <input type="text" name="numero_de_orden" id="numero_de_orden" required>
+      </div>
+      <div class="form-group">
+        <label for="fecha">Fecha</label>
+        <input type="date" name="fecha" id="fecha" value="{{ request.form.fecha or '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="monto_base">Monto base</label>
+        <input type="number" name="monto_base" id="monto_base" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="estado">Estado</label>
+        <select name="estado" id="estado" required>
+          <option value="">Selecciona un estado</option>
+          {% for value, label in states %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="rut_cliente">Cliente</label>
+        <select name="rut_cliente" id="rut_cliente" required>
+          <option value="">Selecciona un cliente</option>
+          {% for client in clients %}
+            <option value="{{ client.rut }}">{{ client.nombre }} ({{ client.rut }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="id_comuna_origen">Comuna origen</label>
+        <select name="id_comuna_origen" id="id_comuna_origen" required>
+          <option value="">Selecciona comuna</option>
+          {% for comuna in communes %}
+            <option value="{{ comuna.id_comuna }}">{{ comuna.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="id_comuna_destino">Comuna destino</label>
+        <select name="id_comuna_destino" id="id_comuna_destino" required>
+          <option value="">Selecciona comuna</option>
+          {% for comuna in communes %}
+            <option value="{{ comuna.id_comuna }}">{{ comuna.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group full-width">
+        <label for="direccion_origen">Dirección de origen</label>
+        <input type="text" name="direccion_origen" id="direccion_origen" required>
+      </div>
+      <div class="form-group full-width">
+        <label for="direccion_destino">Dirección de destino</label>
+        <input type="text" name="direccion_destino" id="direccion_destino" required>
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button type="submit" class="btn btn-primary">Guardar orden</button>
+      <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Factura{% endblock %}
+
+{% block header %}
+  <h1>Registrar Factura</h1>
+  <p class="subtitle">Asocia una factura a una orden existente.</p>
+{% endblock %}
+
+{% block content %}
+  <form method="post" class="entity-form">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="numero_de_factura">Número de factura</label>
+        <input type="text" name="numero_de_factura" id="numero_de_factura" required>
+      </div>
+      <div class="form-group">
+        <label for="fecha">Fecha</label>
+        <input type="date" name="fecha" id="fecha" required>
+      </div>
+      <div class="form-group">
+        <label for="monto_total">Monto total</label>
+        <input type="number" name="monto_total" id="monto_total" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="metodo_de_pago">Método de pago</label>
+        <select name="metodo_de_pago" id="metodo_de_pago" required>
+          <option value="">Selecciona método</option>
+          {% for value, label in payment_methods %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group full-width">
+        <label for="numero_de_orden">Orden</label>
+        <select name="numero_de_orden" id="numero_de_orden" required>
+          <option value="">Selecciona orden</option>
+          {% for order in pending_orders %}
+            <option value="{{ order.numero_de_orden }}">{{ order.numero_de_orden }} - {{ order.cliente_nombre }} - {{ order.monto_base }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button type="submit" class="btn btn-primary">Guardar factura</button>
+      <a class="btn btn-secondary" href="{{ url_for('logistics.list_receipts') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

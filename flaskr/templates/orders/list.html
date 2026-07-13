@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Órdenes{% endblock %}
+
+{% block header %}
+  <h1>Órdenes de Retiro</h1>
+  <p class="subtitle">Lista de órdenes registradas en el sistema.</p>
+{% endblock %}
+
+{% block content %}
+  <div class="button-row">
+    <a class="btn btn-primary" href="{{ url_for('logistics.create_order') }}">Crear nueva orden</a>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Orden</th>
+        <th>Fecha</th>
+        <th>Cliente</th>
+        <th>Estado</th>
+        <th>Monto base</th>
+        <th>Factura</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+        <tr>
+          <td><a href="{{ url_for('logistics.order_detail', order_id=order.numero_de_orden) }}">{{ order.numero_de_orden }}</a></td>
+          <td>{{ order.fecha }}</td>
+          <td>{{ order.cliente_nombre }}</td>
+          <td>{{ order.estado }}</td>
+          <td>{{ order.monto_base }}</td>
+          <td>{{ 'Sí' if order.tiene_factura else 'No' }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6">No hay órdenes registradas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

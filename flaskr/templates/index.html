@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Control{% endblock %}
+
+{% block header %}
+  <h1>Panel de Control</h1>
+  <p class="subtitle">Resumen operativo y accesos rápidos para tu jornada.</p>
+{% endblock %}
+
+{% block content %}
+  <div class="dashboard-grid">
+    <div class="dashboard-card">
+      <span class="card-label">Órdenes ingresadas</span>
+      <strong>{{ counts.total }}</strong>
+    </div>
+    <div class="dashboard-card">
+      <span class="card-label">En proceso</span>
+      <strong>{{ counts.in_process }}</strong>
+    </div>
+    <div class="dashboard-card">
+      <span class="card-label">Pendientes</span>
+      <strong>{{ counts.pending }}</strong>
+    </div>
+    <div class="dashboard-card">
+      <span class="card-label">Choferes disponibles</span>
+      <strong>{{ counts.available_drivers }}</strong>
+    </div>
+  </div>
+
+  <section class="dashboard-section">
+    <h2>Acceso rápido</h2>
+    <p>Usa el menú superior para crear órdenes, registrar facturas y revisar clientes.</p>
+    <div class="button-row">
+      <a class="btn btn-primary" href="{{ url_for('logistics.create_order') }}">Crear orden</a>
+      <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">Ver órdenes</a>
+    </div>
+  </section>
+{% endblock %}
