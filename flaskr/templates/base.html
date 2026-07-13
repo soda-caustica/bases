@@ -78,15 +78,7 @@
 
   <div class="main-area">
     <header class="topbar">
-      <div class="topbar-search">
-        <i data-lucide="search" style="width:14px;height:14px"></i>
-        <input type="text" placeholder="Buscar órdenes, clientes...">
-      </div>
       <div class="topbar-spacer"></div>
-      <button class="topbar-icon-btn" title="Notificaciones">
-        <i data-lucide="bell" style="width:16px;height:16px"></i>
-        <span class="topbar-dot"></span>
-      </button>
       <div class="topbar-profile-btn">
         <div class="topbar-avatar">{{ (g.user.name or g.user.rut)[:2]|upper }}</div>
         <span style="font-size:13px; font-weight:500;">{{ g.user.name or g.user.rut }}</span>

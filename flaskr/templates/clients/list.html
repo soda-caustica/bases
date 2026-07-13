@@ -13,7 +13,7 @@
 <form method="get" class="card table-toolbar" style="margin-bottom:16px;">
   <input type="text" name="q" placeholder="Buscar por nombre o RUT..." value="{{ filters.q }}" style="max-width:220px;">
   <select name="tipo" style="max-width:160px;">
-    <option value="">Persona o Empresa</option>
+    <option value="">Todos</option>
     <option value="persona" {{ 'selected' if filters.tipo == 'persona' }}>Persona</option>
     <option value="empresa" {{ 'selected' if filters.tipo == 'empresa' }}>Empresa</option>
   </select>

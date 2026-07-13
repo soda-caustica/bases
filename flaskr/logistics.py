@@ -1,5 +1,3 @@
-from datetime import date
-
 from flask import (
     Blueprint, abort, flash, g, redirect, render_template, request, url_for
 )
