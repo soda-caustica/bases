@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Cuenta{% endblock %}
+
+{% block guest_content %}
+<div class="auth-shell">
+  <div class="card auth-card" style="max-width: 480px;">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><i data-lucide="truck" style="width:20px;height:20px"></i></div>
+    </div>
+    <h1 class="auth-title">Crea tu cuenta de cliente</h1>
+    <p class="auth-subtitle">Regístrate para solicitar retiros de vehículos y revisar tus órdenes</p>
+
+    <form method="post">
+      <div class="auth-role-tabs">
+        <button type="button" class="auth-role-tab active" data-tipo="persona" onclick="setTipo('persona')">Persona Natural</button>
+        <button type="button" class="auth-role-tab" data-tipo="empresa" onclick="setTipo('empresa')">Empresa</button>
+      </div>
+      <input type="hidden" name="tipo_cliente" id="tipo_cliente" value="persona">
+
+      <div class="form-group">
+        <label for="rut">RUT</label>
+        <input type="text" name="rut" id="rut" required placeholder="12.345.678-9" value="{{ request.form.rut or '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="nombre" id="nombre_label">Nombre completo</label>
+        <input type="text" name="nombre" id="nombre" required placeholder="Ej: Carlos Muñoz" value="{{ request.form.nombre or '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="email">Correo electrónico</label>
+        <input type="email" name="email" id="email" required placeholder="correo@ejemplo.com" value="{{ request.form.email or '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="fono">Teléfono</label>
+        <input type="text" name="fono" id="fono" placeholder="+56 9 1234 5678" value="{{ request.form.fono or '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="direccion_residencia">Dirección</label>
+        <input type="text" name="direccion_residencia" id="direccion_residencia" placeholder="Calle y número" value="{{ request.form.direccion_residencia or '' }}">
+      </div>
+
+      <div class="form-group">
+        <label for="id_comuna">Comuna</label>
+        <select name="id_comuna" id="id_comuna" required>
+          <option value="">Selecciona comuna</option>
+          {% for comuna in communes %}
+            <option value="{{ comuna.id_comuna }}">{{ comuna.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" name="password" id="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirm">Confirmar contraseña</label>
+        <input type="password" name="password_confirm" id="password_confirm" required minlength="6" placeholder="Repite tu contraseña">
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">
+        <i data-lucide="user-plus" style="width:15px;height:15px"></i> Crear cuenta
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      ¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}" style="color:#1d4ed8; font-weight:600;">Inicia sesión</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  function setTipo(tipo) {
+    document.getElementById('tipo_cliente').value = tipo;
+    document.querySelectorAll('.auth-role-tab').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.tipo === tipo);
+    });
+    document.getElementById('nombre_label').textContent = tipo === 'empresa' ? 'Razón social' : 'Nombre completo';
+    document.getElementById('nombre').placeholder = tipo === 'empresa' ? 'Ej: Transportes Del Sur Ltda.' : 'Ej: Carlos Muñoz';
+  }
+  if (window.lucide) { lucide.createIcons(); }
+</script>
+{% endblock %}

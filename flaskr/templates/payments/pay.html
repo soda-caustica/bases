@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagar Orden #{{ order.numero_de_orden }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Pagar Orden #{{ order.numero_de_orden }}</h1>
+    <p class="page-subtitle">Completa el pago del servicio de grúa.</p>
+  </div>
+</div>
+
+<div class="card" style="max-width: 480px; padding: 28px;">
+  <div style="display:flex; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid #f1f5f9; margin-bottom:20px;">
+    <div>
+      <p style="margin:0; font-size:13px; color:#64748b;">Cliente</p>
+      <p style="margin:2px 0 0; font-weight:600; color:#0f172a;">{{ order.cliente_nombre }}</p>
+    </div>
+    <div style="text-align:right;">
+      <p style="margin:0; font-size:13px; color:#64748b;">Monto a pagar</p>
+      <p style="margin:2px 0 0; font-size:20px; font-weight:700; color:#1d4ed8;">${{ '{:,.0f}'.format(order.monto_base) }}</p>
+    </div>
+  </div>
+
+  {% if already_paid %}
+    <div class="alert-item alert-info" style="margin-bottom:0;">
+      <i data-lucide="check-square" style="width:14px;height:14px; margin-top:1px;"></i>
+      <span>Esta orden ya fue pagada. Puedes revisar la factura desde "Facturas".</span>
+    </div>
+    <a href="{{ url_for('logistics.list_receipts') }}" class="btn btn-secondary btn-block" style="margin-top:16px;">Ver Facturas</a>
+  {% else %}
+    <form method="post">
+      <div class="form-group">
+        <label for="metodo_de_pago">Método de pago</label>
+        <select name="metodo_de_pago" id="metodo_de_pago" required>
+          <option value="">Selecciona un método</option>
+          {% for value, label in payment_methods %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:12px;">
+        <i data-lucide="credit-card" style="width:15px;height:15px"></i> Confirmar Pago
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+<div class="button-row" style="margin-top:16px;">
+  <a class="btn btn-secondary" href="{{ url_for('logistics.order_detail', order_id=order.numero_de_orden) }}">
+    <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Volver a la orden
+  </a>
+</div>
+{% endblock %}

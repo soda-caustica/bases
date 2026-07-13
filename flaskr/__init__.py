@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, url_for
+from flask import Flask, redirect, url_for
 import os
 
 
@@ -17,13 +17,30 @@ def create_app(test_config=None):
     from . import logistics
     app.register_blueprint(logistics.bp)
 
+    @app.context_processor
+    def inject_active_view():
+        from flask import request
+        endpoint_map = {
+            'logistics.dashboard': 'dashboard',
+            'logistics.list_clients': 'clients',
+            'logistics.list_orders': 'orders',
+            'logistics.create_order': 'orders',
+            'logistics.order_detail': 'orders',
+            'logistics.list_payments': 'payments',
+            'logistics.pay_order': 'payments',
+            'logistics.list_receipts': 'receipts',
+            'logistics.create_receipt': 'receipts',
+            'logistics.receipt_detail': 'receipts',
+        }
+        return {'active_view': endpoint_map.get(request.endpoint)}
+
     @app.route('/')
+
     def hello_world():
-        return redirect(url_for('index'))
+        return redirect(url_for('logistics.dashboard'))
 
     @app.route('/index')
     def index():
-        counts = logistics._fetch_counts()
-        return render_template('index.html', counts=counts)
+        return redirect(url_for('logistics.dashboard'))
 
     return app

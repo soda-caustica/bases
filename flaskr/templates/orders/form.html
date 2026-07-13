@@ -2,13 +2,17 @@
 
 {% block title %}Crear Orden{% endblock %}
 
-{% block header %}
-  <h1>Crear Orden de Retiro</h1>
-  <p class="subtitle">Registra una nueva orden para el cliente seleccionado.</p>
-{% endblock %}
-
 {% block content %}
-  <form method="post" class="entity-form">
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ 'Crear Orden de Retiro' if is_admin else 'Solicitar Retiro de Vehículo' }}</h1>
+    <p class="page-subtitle">Completa los datos del servicio de grúa.</p>
+  </div>
+</div>
+
+<form method="post">
+  <div class="card form-section">
+    <h3>Servicio</h3>
     <div class="form-grid">
       <div class="form-group">
         <label for="numero_de_orden">Número de orden</label>
@@ -18,10 +22,17 @@
         <label for="fecha">Fecha</label>
         <input type="date" name="fecha" id="fecha" value="{{ request.form.fecha or '' }}" required>
       </div>
+      {% if is_admin %}
       <div class="form-group">
-        <label for="monto_base">Monto base</label>
-        <input type="number" name="monto_base" id="monto_base" step="0.01" required>
+        <label for="rut_cliente">Cliente</label>
+        <select name="rut_cliente" id="rut_cliente" required>
+          <option value="">Selecciona un cliente</option>
+          {% for client in clients %}
+            <option value="{{ client.rut }}">{{ client.nombre }} ({{ client.rut }})</option>
+          {% endfor %}
+        </select>
       </div>
+      {% endif %}
       <div class="form-group">
         <label for="estado">Estado</label>
         <select name="estado" id="estado" required>
@@ -31,14 +42,9 @@
           {% endfor %}
         </select>
       </div>
-      <div class="form-group">
-        <label for="rut_cliente">Cliente</label>
-        <select name="rut_cliente" id="rut_cliente" required>
-          <option value="">Selecciona un cliente</option>
-          {% for client in clients %}
-            <option value="{{ client.rut }}">{{ client.nombre }} ({{ client.rut }})</option>
-          {% endfor %}
-        </select>
+      <div class="form-group full-width">
+        <label for="direccion_origen">Dirección de origen</label>
+        <input type="text" name="direccion_origen" id="direccion_origen" required>
       </div>
       <div class="form-group">
         <label for="id_comuna_origen">Comuna origen</label>
@@ -49,6 +55,10 @@
           {% endfor %}
         </select>
       </div>
+      <div class="form-group full-width">
+        <label for="direccion_destino">Dirección de destino</label>
+        <input type="text" name="direccion_destino" id="direccion_destino" required>
+      </div>
       <div class="form-group">
         <label for="id_comuna_destino">Comuna destino</label>
         <select name="id_comuna_destino" id="id_comuna_destino" required>
@@ -58,19 +68,24 @@
           {% endfor %}
         </select>
       </div>
-      <div class="form-group full-width">
-        <label for="direccion_origen">Dirección de origen</label>
-        <input type="text" name="direccion_origen" id="direccion_origen" required>
-      </div>
-      <div class="form-group full-width">
-        <label for="direccion_destino">Dirección de destino</label>
-        <input type="text" name="direccion_destino" id="direccion_destino" required>
-      </div>
     </div>
+  </div>
 
-    <div class="button-row">
-      <button type="submit" class="btn btn-primary">Guardar orden</button>
-      <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">Cancelar</a>
+  <div class="card form-section">
+    <h3>Costos</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="monto_base">Monto base (CLP)</label>
+        <input type="number" name="monto_base" id="monto_base" step="0.01" required>
+      </div>
     </div>
-  </form>
+  </div>
+
+  <div class="button-row">
+    <button type="submit" class="btn btn-primary">
+      <i data-lucide="check" style="width:14px;height:14px"></i> Guardar orden
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">Cancelar</a>
+  </div>
+</form>
 {% endblock %}

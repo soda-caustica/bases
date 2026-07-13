@@ -3,50 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %} - Flaskr</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style3.css') }}">
+    <title>{% block title %}{% endblock %} - TowPro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
 
-  <nav class="navbar">
-    <div class="nav-container">
-      <div class="logo-group">
-        <h1 class="logo">Logística Central</h1>
-        <nav class="main-nav">
-          <a href="{{ url_for('index') }}">Dashboard</a>
-          <a href="{{ url_for('logistics.list_orders') }}">Órdenes</a>
-          <a href="{{ url_for('logistics.list_receipts') }}">Facturas</a>
-          <a href="{{ url_for('logistics.list_clients') }}">Clientes</a>
-        </nav>
+{% if g.user %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><i data-lucide="truck" style="width:16px;height:16px"></i></div>
+      <div>
+        <p class="sidebar-brand-name">TowPro</p>
+        <p class="sidebar-brand-sub">Gestión de Grúas</p>
       </div>
-      <ul class="nav-links">
-        {% if g.user %}
-          <li><span class="user-rut">{{ g.user.name or g.user.rut }}</span></li>
-          <li><a class="nav-btn logout" href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></li>
-        {% else %}
-          <li><a class="nav-btn login" href="{{ url_for('auth.login') }}">Iniciar Sesión</a></li>
-        {% endif %}
-      </ul>
     </div>
-  </nav>
 
-  <main class="main-container">
-    
-    {% for message in get_flashed_messages() %}
-      <div class="flash">{{ message }}</div>
-    {% endfor %}
+    <nav class="sidebar-nav">
+      <p class="sidebar-section-label">Menú principal</p>
 
-    <section class="card-content">
-      <header class="card-header">
-        {% block header %}{% endblock %}
-      </header>
-      
-      <div class="card-body">
-        {% block content %}{% endblock %}
+      {% if g.user.role == 'admin' %}
+        <a class="sidebar-link {{ 'active' if active_view == 'dashboard' }}" href="{{ url_for('logistics.dashboard') }}">
+          <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Dashboard
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'clients' }}" href="{{ url_for('logistics.list_clients') }}">
+          <i data-lucide="users" style="width:16px;height:16px"></i> Clientes
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'orders' }}" href="{{ url_for('logistics.list_orders') }}">
+          <i data-lucide="clipboard-list" style="width:16px;height:16px"></i> Órdenes de Retiro
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'payments' }}" href="{{ url_for('logistics.list_payments') }}">
+          <i data-lucide="credit-card" style="width:16px;height:16px"></i> Pagos
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'receipts' }}" href="{{ url_for('logistics.list_receipts') }}">
+          <i data-lucide="file-text" style="width:16px;height:16px"></i> Facturas
+        </a>
+      {% else %}
+        <a class="sidebar-link {{ 'active' if active_view == 'dashboard' }}" href="{{ url_for('logistics.dashboard') }}">
+          <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Mi Dashboard
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'orders' }}" href="{{ url_for('logistics.list_orders') }}">
+          <i data-lucide="clipboard-list" style="width:16px;height:16px"></i> Mis Órdenes
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'payments' }}" href="{{ url_for('logistics.list_payments') }}">
+          <i data-lucide="credit-card" style="width:16px;height:16px"></i> Pagos
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'receipts' }}" href="{{ url_for('logistics.list_receipts') }}">
+          <i data-lucide="file-text" style="width:16px;height:16px"></i> Facturas
+        </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar"><i data-lucide="shield" style="width:13px;height:13px"></i></div>
+      <div style="flex:1; min-width:0;">
+        <p class="sidebar-user-name">{{ g.user.name or g.user.rut }}</p>
+        <p class="sidebar-user-role">{{ 'Administrador' if g.user.role == 'admin' else 'Cliente' }}</p>
       </div>
-    </section>
-    
-  </main>
+      <a class="sidebar-logout" href="{{ url_for('auth.logout') }}" title="Cerrar sesión">
+        <i data-lucide="log-out" style="width:14px;height:14px"></i>
+      </a>
+    </div>
+  </aside>
 
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-search">
+        <i data-lucide="search" style="width:14px;height:14px"></i>
+        <input type="text" placeholder="Buscar órdenes, clientes...">
+      </div>
+      <div class="topbar-spacer"></div>
+      <button class="topbar-icon-btn" title="Notificaciones">
+        <i data-lucide="bell" style="width:16px;height:16px"></i>
+        <span class="topbar-dot"></span>
+      </button>
+      <div class="topbar-profile-btn">
+        <div class="topbar-avatar">{{ (g.user.name or g.user.rut)[:2]|upper }}</div>
+        <span style="font-size:13px; font-weight:500;">{{ g.user.name or g.user.rut }}</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+      {% for message in get_flashed_messages() %}
+        <div class="flash">{{ message }}</div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+  <main>
+    {% for message in get_flashed_messages() %}
+      <div class="flash" style="max-width:420px; margin: 16px auto 0;">{{ message }}</div>
+    {% endfor %}
+    {% block guest_content %}{% endblock %}
+  </main>
+{% endif %}
+
+<script>
+  if (window.lucide) { lucide.createIcons(); }
+</script>
 </body>
 </html>

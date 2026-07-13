@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hola, {{ g.user.name }}</h1>
+    <p class="page-subtitle">Sigue el estado de tus solicitudes y facturas.</p>
+  </div>
+  <a href="{{ url_for('logistics.create_order') }}" class="btn btn-primary" style="padding:10px 20px; font-size:14px;">
+    <i data-lucide="plus" style="width:15px;height:15px"></i> Solicitar Retiro de Vehículo
+  </a>
+</div>
+
+<div class="kpi-grid">
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Solicitudes Activas</span><span class="kpi-value">{{ my_orders|selectattr('estado', 'in', ['pendiente','en_proceso'])|list|length }}</span></div>
+      <div class="kpi-icon" style="background:#3b82f6;"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Servicios Completados</span><span class="kpi-value">{{ completed_count }}</span></div>
+      <div class="kpi-icon" style="background:#10b981;"><i data-lucide="check-square" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Facturas Pendientes</span><span class="kpi-value">{{ pending_invoices_count }}</span></div>
+      <div class="kpi-icon" style="background:#f59e0b;"><i data-lucide="file-text" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Total Pagado</span><span class="kpi-value">${{ '{:,.0f}'.format(total_paid) }}</span></div>
+      <div class="kpi-icon" style="background:#8b5cf6;"><i data-lucide="credit-card" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2-3-2">
+  <div class="card" style="padding:24px;">
+    {% if active_order %}
+      <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <h3 style="margin:0; font-size:14px; font-weight:600; color:#0f172a;">Orden Activa · #{{ active_order.numero_de_orden }}</h3>
+          <p style="margin:4px 0 0; font-size:12px; color:#64748b;">{{ active_order.direccion_origen }} → {{ active_order.direccion_destino }}</p>
+        </div>
+        <span class="badge badge-{{ active_order.estado }}">{{ states.get(active_order.estado, active_order.estado) }}</span>
+      </div>
+
+      <div class="timeline">
+        {% set order_steps = ['pendiente', 'en_proceso', 'completada'] %}
+        {% set step_labels = {'pendiente': 'Solicitud recibida', 'en_proceso': 'Chofer asignado / en camino', 'completada': 'Vehículo entregado'} %}
+        {% set current_index = order_steps.index(active_order.estado) if active_order.estado in order_steps else 0 %}
+        {% for step in order_steps %}
+        {% set done = order_steps.index(step) <= current_index %}
+        <div class="timeline-row">
+          <div class="timeline-dot-col">
+            <div class="timeline-dot {{ 'done' if done }}">{% if done %}<div class="timeline-dot-inner"></div>{% endif %}</div>
+            {% if not loop.last %}<div class="timeline-line {{ 'done' if done }}"></div>{% endif %}
+          </div>
+          <div class="timeline-label {{ 'done' if done }}">{{ step_labels[step] }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="info-banner">
+        <i data-lucide="truck" style="width:16px;height:16px; color:#2563eb;"></i>
+        <div>
+          <p style="margin:0; font-size:13px; font-weight:500;">Tu orden está siendo procesada por el equipo de operaciones.</p>
+          <p style="margin:2px 0 0; font-size:12px; color:#3b82f6;">Puedes ver el detalle completo en "Mis Órdenes".</p>
+        </div>
+      </div>
+    {% else %}
+      <div style="text-align:center; padding:40px 0; color:#94a3b8;">
+        <i data-lucide="clipboard-list" style="width:32px;height:32px; margin-bottom:10px;"></i>
+        <p style="margin:0; font-size:14px;">No tienes solicitudes activas en este momento.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px;">
+    <div class="card panel">
+      <h3>Facturas Recientes</h3>
+      {% for inv in my_invoices %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f8fafc;">
+        <div>
+          <p style="margin:0; font-size:13px; font-weight:500; color:#0f172a;">Factura #{{ inv.numero_de_factura }}</p>
+          <p style="margin:2px 0 0; font-size:11.5px; color:#94a3b8;">Orden #{{ inv.numero_de_orden }}</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="margin:0; font-size:13px; font-weight:600; color:#0f172a;">${{ '{:,.0f}'.format(inv.monto_total) }}</p>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-muted" style="font-size:13px;">Aún no tienes facturas.</p>
+      {% endfor %}
+      <a href="{{ url_for('logistics.list_receipts') }}" class="btn btn-ghost btn-block" style="margin-top:10px; font-size:12px;">Ver todas las facturas</a>
+    </div>
+
+    <div class="card panel" style="flex:1;">
+      <h3>Historial de Servicios</h3>
+      {% for order in my_orders %}
+        {% if order.estado == 'completada' %}
+        <div style="padding:9px 0; border-bottom:1px solid #f8fafc;">
+          <p style="margin:0; font-size:12.5px; font-weight:500; color:#0f172a;">Orden #{{ order.numero_de_orden }}</p>
+          <p style="margin:2px 0 0; font-size:11.5px; color:#94a3b8;">{{ order.fecha }}</p>
+        </div>
+        {% endif %}
+      {% else %}
+        <p class="text-muted" style="font-size:13px;">Sin servicios completados aún.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

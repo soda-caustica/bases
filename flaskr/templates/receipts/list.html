@@ -2,16 +2,20 @@
 
 {% block title %}Facturas{% endblock %}
 
-{% block header %}
-  <h1>Facturas</h1>
-  <p class="subtitle">Todas las facturas registradas para las órdenes.</p>
-{% endblock %}
-
 {% block content %}
-  <div class="button-row">
-    <a class="btn btn-primary" href="{{ url_for('logistics.create_receipt') }}">Registrar factura</a>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Facturas</h1>
+    <p class="page-subtitle">{{ 'Todas las facturas registradas para las órdenes.' if is_admin else 'Tus facturas emitidas.' }}</p>
   </div>
+  {% if is_admin %}
+  <a href="{{ url_for('logistics.create_receipt') }}" class="btn btn-primary">
+    <i data-lucide="plus" style="width:14px;height:14px"></i> Registrar Factura
+  </a>
+  {% endif %}
+</div>
 
+<div class="card table-card">
   <table class="data-table">
     <thead>
       <tr>
@@ -20,26 +24,33 @@
         <th>Monto</th>
         <th>Método</th>
         <th>Orden</th>
-        <th>Cliente</th>
+        {% if is_admin %}<th>Cliente</th>{% endif %}
         <th>Estado orden</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       {% for receipt in receipts %}
         <tr>
-          <td>{{ receipt.numero_de_factura }}</td>
-          <td>{{ receipt.fecha }}</td>
-          <td>{{ receipt.monto_total }}</td>
-          <td>{{ receipt.metodo_de_pago }}</td>
-          <td>{{ receipt.numero_de_orden }}</td>
-          <td>{{ receipt.cliente_nombre }}</td>
-          <td>{{ receipt.orden_estado }}</td>
+          <td><span class="mono" style="color:#1d4ed8; font-weight:600;">#{{ receipt.numero_de_factura }}</span></td>
+          <td class="text-muted" style="font-size:12px;">{{ receipt.fecha }}</td>
+          <td class="text-strong">${{ '{:,.0f}'.format(receipt.monto_total) }}</td>
+          <td class="text-muted" style="font-size:12.5px;">{{ receipt.metodo_de_pago }}</td>
+          <td><span class="mono">#{{ receipt.numero_de_orden }}</span></td>
+          {% if is_admin %}<td class="text-strong">{{ receipt.cliente_nombre }}</td>{% endif %}
+          <td><span class="badge badge-{{ receipt.orden_estado }}">{{ receipt.orden_estado.replace('_', ' ') }}</span></td>
+          <td>
+            <a href="{{ url_for('logistics.receipt_detail', receipt_id=receipt.numero_de_factura) }}" class="btn btn-ghost btn-sm">
+              <i data-lucide="eye" style="width:13px;height:13px"></i> Ver
+            </a>
+          </td>
         </tr>
       {% else %}
         <tr>
-          <td colspan="7">No hay facturas registradas.</td>
+          <td colspan="8" class="text-muted">No hay facturas registradas.</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 {% endblock %}

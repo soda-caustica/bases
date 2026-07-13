@@ -2,56 +2,52 @@
 
 {% block title %}Detalle de Orden{% endblock %}
 
-{% block header %}
-  <h1>Detalle de Orden</h1>
-  <p class="subtitle">Información completa de la orden seleccionada.</p>
-{% endblock %}
-
 {% block content %}
-  <div class="detail-grid">
-    <div>
-      <strong>Orden:</strong> {{ order.numero_de_orden }}
-    </div>
-    <div>
-      <strong>Fecha:</strong> {{ order.fecha }}
-    </div>
-    <div>
-      <strong>Estado:</strong> {{ order.estado }}
-    </div>
-    <div>
-      <strong>Cliente:</strong> {{ order.cliente_nombre }}
-    </div>
-    <div>
-      <strong>Correo:</strong> {{ order.cliente_email or '-' }}
-    </div>
-    <div>
-      <strong>Teléfono:</strong> {{ order.cliente_fono or '-' }}
-    </div>
-    <div class="full-width">
-      <strong>Origen:</strong> {{ order.direccion_origen }}
-    </div>
-    <div class="full-width">
-      <strong>Destino:</strong> {{ order.direccion_destino }}
-    </div>
-    <div>
-      <strong>Monto base:</strong> {{ order.monto_base }}
-    </div>
-    <div>
-      <strong>Factura registrada:</strong> {{ 'Sí' if receipt else 'No' }}
-    </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Orden #{{ order.numero_de_orden }}</h1>
+    <p class="page-subtitle">Información completa de la orden seleccionada.</p>
   </div>
+  <span class="badge badge-{{ order.estado }}" style="font-size:13px; padding:6px 14px;">{{ order.estado.replace('_', ' ') }}</span>
+</div>
 
-  {% if receipt %}
-    <section class="receipt-summary">
-      <h2>Factura asociada</h2>
-      <p><strong>Número:</strong> {{ receipt.numero_de_factura }}</p>
-      <p><strong>Fecha:</strong> {{ receipt.fecha }}</p>
-      <p><strong>Monto:</strong> {{ receipt.monto_total }}</p>
-      <p><strong>Método de pago:</strong> {{ receipt.metodo_de_pago }}</p>
-    </section>
-  {% endif %}
-
-  <div class="button-row">
-    <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">Volver a órdenes</a>
+<div class="card" style="padding:24px; margin-bottom:16px;">
+  <div class="form-grid" style="margin-bottom:0;">
+    <div><label>Fecha</label><p class="text-strong">{{ order.fecha }}</p></div>
+    <div><label>Cliente</label><p class="text-strong">{{ order.cliente_nombre }}</p></div>
+    <div><label>Correo</label><p>{{ order.cliente_email or '-' }}</p></div>
+    <div><label>Teléfono</label><p>{{ order.cliente_fono or '-' }}</p></div>
+    <div class="full-width"><label>Origen</label><p>{{ order.direccion_origen }}</p></div>
+    <div class="full-width"><label>Destino</label><p>{{ order.direccion_destino }}</p></div>
+    <div><label>Monto base</label><p class="text-strong">${{ '{:,.0f}'.format(order.monto_base) }}</p></div>
+    <div><label>Factura registrada</label><p>{{ 'Sí' if receipt else 'No' }}</p></div>
   </div>
+</div>
+
+{% if receipt %}
+  <div class="card panel" style="margin-bottom:16px;">
+    <h3>Factura Asociada</h3>
+    <p style="font-size:13px; margin:4px 0;"><strong>Número:</strong> #{{ receipt.numero_de_factura }}</p>
+    <p style="font-size:13px; margin:4px 0;"><strong>Fecha:</strong> {{ receipt.fecha }}</p>
+    <p style="font-size:13px; margin:4px 0;"><strong>Monto:</strong> ${{ '{:,.0f}'.format(receipt.monto_total) }}</p>
+    <p style="font-size:13px; margin:4px 0;"><strong>Método de pago:</strong> {{ receipt.metodo_de_pago }}</p>
+    <a href="{{ url_for('logistics.receipt_detail', receipt_id=receipt.numero_de_factura) }}" class="btn btn-secondary" style="margin-top:10px;">
+      <i data-lucide="file-text" style="width:14px;height:14px"></i> Ver factura
+    </a>
+  </div>
+{% else %}
+  <div class="card panel" style="margin-bottom:16px;">
+    <h3>Pago Pendiente</h3>
+    <p style="font-size:13px; color:#64748b; margin:0 0 12px;">Esta orden aún no tiene una factura/pago asociado.</p>
+    <a href="{{ url_for('logistics.pay_order', order_id=order.numero_de_orden) }}" class="btn btn-primary">
+      <i data-lucide="credit-card" style="width:14px;height:14px"></i> Ir a pagar
+    </a>
+  </div>
+{% endif %}
+
+<div class="button-row">
+  <a class="btn btn-secondary" href="{{ url_for('logistics.list_orders') }}">
+    <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Volver a órdenes
+  </a>
+</div>
 {% endblock %}

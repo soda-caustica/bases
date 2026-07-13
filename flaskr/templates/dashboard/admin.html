@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Panel Operativo</h1>
+    <p class="page-subtitle">Resumen operativo y accesos rápidos para tu jornada.</p>
+  </div>
+  <a href="{{ url_for('logistics.create_order') }}" class="btn btn-primary">
+    <i data-lucide="plus" style="width:15px;height:15px"></i> Nueva Orden
+  </a>
+</div>
+
+<div class="kpi-grid">
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Órdenes Pendientes</span><span class="kpi-value">{{ counts.pending }}</span></div>
+      <div class="kpi-icon" style="background:#f59e0b;"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">En Ejecución</span><span class="kpi-value">{{ counts.in_process }}</span></div>
+      <div class="kpi-icon" style="background:#3b82f6;"><i data-lucide="truck" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Completadas</span><span class="kpi-value">{{ counts.completed }}</span></div>
+      <div class="kpi-icon" style="background:#10b981;"><i data-lucide="check-square" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Facturación del Mes</span><span class="kpi-value">${{ '{:,.0f}'.format(counts.monthly_billing) }}</span></div>
+      <div class="kpi-icon" style="background:#8b5cf6;"><i data-lucide="trending-up" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Clientes Registrados</span><span class="kpi-value">{{ counts.total_clients }}</span></div>
+      <div class="kpi-icon" style="background:#0ea5e9;"><i data-lucide="users" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Choferes Disponibles</span><span class="kpi-value">{{ counts.available_drivers }}</span></div>
+      <div class="kpi-icon" style="background:#6366f1;"><i data-lucide="user" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Facturas Pendientes</span><span class="kpi-value">{{ counts.pending_invoices }}</span></div>
+      <div class="kpi-icon" style="background:#ef4444;"><i data-lucide="credit-card" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Órdenes Totales</span><span class="kpi-value">{{ counts.total }}</span></div>
+      <div class="kpi-icon" style="background:#14b8a6;"><i data-lucide="package" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2-3-2">
+  <div class="card table-card">
+    <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; font-size:14px; font-weight:600; color:#0f172a;">Órdenes Recientes</h3>
+      <a href="{{ url_for('logistics.list_orders') }}" class="btn-ghost btn" style="font-size:12px; padding:4px 10px;">Ver todas <i data-lucide="arrow-up-right" style="width:12px;height:12px"></i></a>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr><th>Orden</th><th>Cliente</th><th>Estado</th><th>Monto</th></tr>
+      </thead>
+      <tbody>
+        {% for order in recent_orders %}
+        <tr>
+          <td><span class="mono">#{{ order.numero_de_orden }}</span></td>
+          <td class="text-strong">{{ order.cliente_nombre }}</td>
+          <td><span class="badge badge-{{ order.estado }}">{{ order.estado.replace('_', ' ') }}</span></td>
+          <td class="text-strong">${{ '{:,.0f}'.format(order.monto_base) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-muted">No hay órdenes registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:14px;">
+    <div class="card panel">
+      <h3>Acciones Rápidas</h3>
+      <div style="display:flex; flex-direction:column; gap:7px;">
+        <a href="{{ url_for('logistics.create_order') }}" class="btn btn-secondary" style="justify-content:flex-start;">
+          <i data-lucide="plus" style="width:14px;height:14px;color:#3b82f6;"></i> Crear Orden
+        </a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-secondary" style="justify-content:flex-start;">
+          <i data-lucide="user" style="width:14px;height:14px;color:#3b82f6;"></i> Registrar Cliente
+        </a>
+        <a href="{{ url_for('logistics.list_clients') }}" class="btn btn-secondary" style="justify-content:flex-start;">
+          <i data-lucide="users" style="width:14px;height:14px;color:#3b82f6;"></i> Ver Clientes
+        </a>
+        <a href="{{ url_for('logistics.create_receipt') }}" class="btn btn-secondary" style="justify-content:flex-start;">
+          <i data-lucide="file-text" style="width:14px;height:14px;color:#3b82f6;"></i> Generar Factura
+        </a>
+      </div>
+    </div>
+
+    <div class="card panel" style="flex:1;">
+      <h3>Alertas</h3>
+      {% if counts.pending_invoices > 0 %}
+      <div class="alert-item alert-warn">
+        <i data-lucide="alert-triangle" style="width:13px;height:13px; margin-top:1px; flex-shrink:0;"></i>
+        <span>{{ counts.pending_invoices }} orden(es) completada(s) sin factura emitida.</span>
+      </div>
+      {% endif %}
+      {% if counts.pending > 0 %}
+      <div class="alert-item alert-info">
+        <i data-lucide="alert-triangle" style="width:13px;height:13px; margin-top:1px; flex-shrink:0;"></i>
+        <span>{{ counts.pending }} orden(es) pendiente(s) de asignación.</span>
+      </div>
+      {% endif %}
+      {% if counts.available_drivers == 0 %}
+      <div class="alert-item alert-error">
+        <i data-lucide="alert-triangle" style="width:13px;height:13px; margin-top:1px; flex-shrink:0;"></i>
+        <span>No hay choferes disponibles en este momento.</span>
+      </div>
+      {% endif %}
+      {% if counts.pending_invoices == 0 and counts.pending == 0 and counts.available_drivers > 0 %}
+      <div class="alert-item alert-info">
+        <i data-lucide="check-square" style="width:13px;height:13px; margin-top:1px; flex-shrink:0;"></i>
+        <span>Todo en orden. No hay alertas pendientes.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -2,17 +2,21 @@
 
 {% block title %}Clientes{% endblock %}
 
-{% block header %}
-  <h1>Clientes</h1>
-  <p class="subtitle">Listado de clientes con su información de contacto.</p>
-{% endblock %}
-
 {% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Clientes</h1>
+    <p class="page-subtitle">{{ clients|length }} clientes registrados.</p>
+  </div>
+</div>
+
+<div class="card table-card">
   <table class="data-table">
     <thead>
       <tr>
-        <th>RUT</th>
         <th>Nombre</th>
+        <th>Tipo</th>
+        <th>RUT</th>
         <th>Correo</th>
         <th>Teléfono</th>
         <th>Dirección</th>
@@ -22,8 +26,9 @@
     <tbody>
       {% for client in clients %}
         <tr>
-          <td>{{ client.rut }}</td>
-          <td>{{ client.cliente_nombre }}</td>
+          <td class="text-strong">{{ client.cliente_nombre }}</td>
+          <td class="text-muted" style="font-size:12px;">{{ client.tipo }}</td>
+          <td><span class="mono">{{ client.rut }}</span></td>
           <td>{{ client.email or '-' }}</td>
           <td>{{ client.fono or '-' }}</td>
           <td>{{ client.direccion_residencia }}</td>
@@ -31,9 +36,10 @@
         </tr>
       {% else %}
         <tr>
-          <td colspan="6">No hay clientes registrados.</td>
+          <td colspan="7" class="text-muted">No hay clientes registrados.</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 {% endblock %}

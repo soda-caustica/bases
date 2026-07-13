@@ -2,13 +2,16 @@
 
 {% block title %}Registrar Factura{% endblock %}
 
-{% block header %}
-  <h1>Registrar Factura</h1>
-  <p class="subtitle">Asocia una factura a una orden existente.</p>
-{% endblock %}
-
 {% block content %}
-  <form method="post" class="entity-form">
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Registrar Factura</h1>
+    <p class="page-subtitle">Asocia una factura a una orden existente sin factura.</p>
+  </div>
+</div>
+
+<form method="post">
+  <div class="card form-section">
     <div class="form-grid">
       <div class="form-group">
         <label for="numero_de_factura">Número de factura</label>
@@ -36,15 +39,18 @@
         <select name="numero_de_orden" id="numero_de_orden" required>
           <option value="">Selecciona orden</option>
           {% for order in pending_orders %}
-            <option value="{{ order.numero_de_orden }}">{{ order.numero_de_orden }} - {{ order.cliente_nombre }} - {{ order.monto_base }}</option>
+            <option value="{{ order.numero_de_orden }}">#{{ order.numero_de_orden }} — {{ order.cliente_nombre }} — ${{ '{:,.0f}'.format(order.monto_base) }}</option>
           {% endfor %}
         </select>
       </div>
     </div>
+  </div>
 
-    <div class="button-row">
-      <button type="submit" class="btn btn-primary">Guardar factura</button>
-      <a class="btn btn-secondary" href="{{ url_for('logistics.list_receipts') }}">Cancelar</a>
-    </div>
-  </form>
+  <div class="button-row">
+    <button type="submit" class="btn btn-primary">
+      <i data-lucide="check" style="width:14px;height:14px"></i> Guardar factura
+    </button>
+    <a class="btn btn-secondary" href="{{ url_for('logistics.list_receipts') }}">Cancelar</a>
+  </div>
+</form>
 {% endblock %}

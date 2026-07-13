@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Factura #{{ invoice.numero_de_factura }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{{ url_for('logistics.list_receipts') }}" class="btn btn-ghost">
+    <i data-lucide="x" style="width:14px;height:14px"></i> Volver a Facturas
+  </a>
+  <div class="button-row">
+    <button class="btn btn-secondary" onclick="window.print()">
+      <i data-lucide="printer" style="width:14px;height:14px"></i> Imprimir
+    </button>
+    <a class="btn btn-secondary" href="mailto:{{ invoice.cliente_email or '' }}?subject=Factura%20%23{{ invoice.numero_de_factura }}">
+      <i data-lucide="send" style="width:14px;height:14px"></i> Enviar por correo
+    </a>
+    <button class="btn btn-primary" onclick="window.print()">
+      <i data-lucide="download" style="width:14px;height:14px"></i> Descargar PDF
+    </button>
+  </div>
+</div>
+
+<div class="card invoice-doc">
+  <div class="invoice-head">
+    <div class="invoice-brand">
+      <div class="invoice-brand-icon"><i data-lucide="truck" style="width:22px;height:22px"></i></div>
+      <div>
+        <p style="margin:0; font-size:16px; font-weight:700; color:#0f172a;">TowPro Services</p>
+        <p style="margin:2px 0 0; font-size:12px; color:#64748b;">Asistencia Vehicular y Transporte de Vehículos</p>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <p style="margin:0; font-size:22px; font-weight:700; color:#0f172a;">FACTURA</p>
+      <p class="mono" style="margin:4px 0 0; font-size:14px; color:#1d4ed8;">#{{ invoice.numero_de_factura }}</p>
+    </div>
+  </div>
+
+  <div class="invoice-parties">
+    <div>
+      <p class="invoice-section-label">Facturado a</p>
+      <p style="margin:0; font-weight:600; color:#0f172a;">{{ invoice.cliente_nombre }}</p>
+      <p style="margin:3px 0 0; font-size:13px; color:#64748b;">RUT: {{ invoice.rut_cliente }}</p>
+      <p style="margin:2px 0 0; font-size:13px; color:#64748b;">{{ invoice.cliente_email or '-' }}</p>
+      <p style="margin:2px 0 0; font-size:13px; color:#64748b;">{{ invoice.cliente_fono or '-' }}</p>
+    </div>
+    <div>
+      <p class="invoice-section-label">Detalles de la Factura</p>
+      <div class="invoice-kv"><span class="text-muted">Fecha de emisión</span><span class="text-strong">{{ invoice.fecha }}</span></div>
+      <div class="invoice-kv"><span class="text-muted">Orden asociada</span><span class="text-strong">#{{ invoice.numero_de_orden }}</span></div>
+      <div class="invoice-kv"><span class="text-muted">Método de pago</span><span class="text-strong">{{ invoice.metodo_de_pago }}</span></div>
+      <div class="invoice-kv"><span class="text-muted">Estado de la orden</span><span class="text-strong">{{ invoice.orden_estado.replace('_', ' ') }}</span></div>
+    </div>
+  </div>
+
+  <table class="data-table" style="margin-bottom:24px;">
+    <thead>
+      <tr>
+        <th>Descripción</th>
+        <th style="text-align:right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Servicio de grúa — {{ invoice.direccion_origen }} → {{ invoice.direccion_destino }}</td>
+        <td style="text-align:right; font-weight:500;">${{ '{:,.0f}'.format(subtotal) }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="invoice-totals">
+    <div class="invoice-totals-box">
+      <div class="invoice-total-row"><span>Subtotal</span><span>${{ '{:,.0f}'.format(subtotal) }}</span></div>
+      <div class="invoice-total-row"><span>IVA (19%)</span><span>${{ '{:,.0f}'.format(iva) }}</span></div>
+      <div class="invoice-grand-total">
+        <span style="font-size:15px; font-weight:700; color:#0f172a;">Total</span>
+        <span style="font-size:17px; font-weight:700; color:#1d4ed8;">${{ '{:,.0f}'.format(invoice.monto_total) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="invoice-footer">
+    TowPro Services · Av. Alameda 1234, Santiago · billing@towpro.cl
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Pagos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Pagos</h1>
+    <p class="page-subtitle">{{ 'Seguimiento de todas las transacciones de pago.' if g.user.role == 'admin' else 'Estado de pago de tus órdenes.' }}</p>
+  </div>
+</div>
+
+<div class="grid-3">
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Pendiente</span><span class="kpi-value">${{ '{:,.0f}'.format(pending_total) }}</span></div>
+      <div class="kpi-icon" style="background:#f59e0b;"><i data-lucide="clock" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Total Pagado</span><span class="kpi-value">${{ '{:,.0f}'.format(paid_total) }}</span></div>
+      <div class="kpi-icon" style="background:#10b981;"><i data-lucide="check-square" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+  <div class="card kpi-card">
+    <div class="kpi-card-top">
+      <div><span class="kpi-label">Órdenes</span><span class="kpi-value">{{ rows|length }}</span></div>
+      <div class="kpi-icon" style="background:#3b82f6;"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="card table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Orden</th>
+        {% if g.user.role == 'admin' %}<th>Cliente</th>{% endif %}
+        <th>Monto</th>
+        <th>Método</th>
+        <th>Estado de Pago</th>
+        <th>Fecha</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><span class="mono">#{{ r.numero_de_orden }}</span></td>
+          {% if g.user.role == 'admin' %}<td class="text-strong">{{ r.cliente_nombre }}</td>{% endif %}
+          <td class="text-strong">${{ '{:,.0f}'.format(r.monto_base) }}</td>
+          <td class="text-muted" style="font-size:12.5px;">{{ r.metodo_de_pago or '—' }}</td>
+          <td>
+            {% if r.numero_de_factura %}
+              <span class="badge badge-paid">Pagado</span>
+            {% else %}
+              <span class="badge badge-pending">Pendiente</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:12px;">{{ r.fecha }}</td>
+          <td>
+            {% if r.numero_de_factura %}
+              <a href="{{ url_for('logistics.receipt_detail', receipt_id=r.numero_de_factura) }}" class="btn btn-ghost btn-sm">
+                <i data-lucide="eye" style="width:13px;height:13px"></i> Ver factura
+              </a>
+            {% else %}
+              <a href="{{ url_for('logistics.pay_order', order_id=r.numero_de_orden) }}" class="btn btn-primary btn-sm">Pagar Ahora</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-muted">No hay órdenes registradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

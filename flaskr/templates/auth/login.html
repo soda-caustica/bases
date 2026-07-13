@@ -2,23 +2,38 @@
 
 {% block title %}Iniciar Sesión{% endblock %}
 
-{% block header %}
-  <h1>Accede a tu cuenta</h1>
-  <p class="subtitle">Ingresa tu RUT y contraseña para continuar</p>
-{% endblock %}
-
-{% block content %}
-  <form method="post" class="login-form">
-    <div class="form-group">
-      <label for="rut">RUT</label>
-      <input type="text" name="rut" id="rut" required placeholder="12.345.678-9">
+{% block guest_content %}
+<div class="auth-shell">
+  <div class="card auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><i data-lucide="truck" style="width:20px;height:20px"></i></div>
     </div>
+    <h1 class="auth-title">Accede a tu cuenta</h1>
+    <p class="auth-subtitle">Ingresa tu RUT y contraseña para continuar</p>
 
-    <div class="form-group">
-      <label for="password">Contraseña</label>
-      <input type="password" name="password" id="password" required placeholder="Tu contraseña">
-    </div>
+    <form method="post">
+      <div class="form-group">
+        <label for="rut">RUT</label>
+        <input type="text" name="rut" id="rut" required placeholder="12.345.678-9" autofocus>
+      </div>
 
-    <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
-  </form>
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" name="password" id="password" required placeholder="Tu contraseña">
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top: 8px;">
+        <i data-lucide="log-in" style="width:15px;height:15px"></i> Iniciar Sesión
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      ¿No tienes cuenta? <a href="{{ url_for('auth.register') }}" style="color:#1d4ed8; font-weight:600;">Regístrate aquí</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  if (window.lucide) { lucide.createIcons(); }
+</script>
 {% endblock %}

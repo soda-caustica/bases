@@ -2,42 +2,58 @@
 
 {% block title %}Órdenes{% endblock %}
 
-{% block header %}
-  <h1>Órdenes de Retiro</h1>
-  <p class="subtitle">Lista de órdenes registradas en el sistema.</p>
-{% endblock %}
-
 {% block content %}
-  <div class="button-row">
-    <a class="btn btn-primary" href="{{ url_for('logistics.create_order') }}">Crear nueva orden</a>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ 'Órdenes de Retiro' if g.user.role == 'admin' else 'Mis Órdenes' }}</h1>
+    <p class="page-subtitle">{{ 'Todas las órdenes registradas en el sistema.' if g.user.role == 'admin' else 'Historial y estado de tus solicitudes de retiro.' }}</p>
   </div>
+  <a href="{{ url_for('logistics.create_order') }}" class="btn btn-primary">
+    <i data-lucide="plus" style="width:14px;height:14px"></i> {{ 'Crear Nueva Orden' if g.user.role == 'admin' else 'Solicitar Retiro' }}
+  </a>
+</div>
 
+<div class="card table-card">
   <table class="data-table">
     <thead>
       <tr>
         <th>Orden</th>
         <th>Fecha</th>
-        <th>Cliente</th>
+        {% if g.user.role == 'admin' %}<th>Cliente</th>{% endif %}
         <th>Estado</th>
         <th>Monto base</th>
         <th>Factura</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
       {% for order in orders %}
         <tr>
-          <td><a href="{{ url_for('logistics.order_detail', order_id=order.numero_de_orden) }}">{{ order.numero_de_orden }}</a></td>
-          <td>{{ order.fecha }}</td>
-          <td>{{ order.cliente_nombre }}</td>
-          <td>{{ order.estado }}</td>
-          <td>{{ order.monto_base }}</td>
-          <td>{{ 'Sí' if order.tiene_factura else 'No' }}</td>
+          <td><span class="mono">#{{ order.numero_de_orden }}</span></td>
+          <td class="text-muted" style="font-size:12px;">{{ order.fecha }}</td>
+          {% if g.user.role == 'admin' %}<td class="text-strong">{{ order.cliente_nombre }}</td>{% endif %}
+          <td><span class="badge badge-{{ order.estado }}">{{ order.estado.replace('_', ' ') }}</span></td>
+          <td class="text-strong">${{ '{:,.0f}'.format(order.monto_base) }}</td>
+          <td>{% if order.tiene_factura %}<span class="badge badge-completada">Sí</span>{% else %}<span class="badge">No</span>{% endif %}</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <a href="{{ url_for('logistics.order_detail', order_id=order.numero_de_orden) }}" class="btn btn-ghost btn-sm">
+                <i data-lucide="eye" style="width:13px;height:13px"></i> Ver
+              </a>
+              {% if not order.tiene_factura %}
+              <a href="{{ url_for('logistics.pay_order', order_id=order.numero_de_orden) }}" class="btn btn-ghost btn-sm">
+                <i data-lucide="credit-card" style="width:13px;height:13px"></i> Pagar
+              </a>
+              {% endif %}
+            </div>
+          </td>
         </tr>
       {% else %}
         <tr>
-          <td colspan="6">No hay órdenes registradas.</td>
+          <td colspan="7" class="text-muted">No hay órdenes registradas.</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 {% endblock %}
