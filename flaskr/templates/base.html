@@ -33,6 +33,15 @@
         <a class="sidebar-link {{ 'active' if active_view == 'orders' }}" href="{{ url_for('logistics.list_orders') }}">
           <i data-lucide="clipboard-list" style="width:16px;height:16px"></i> Órdenes de Retiro
         </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'vehicles' }}" href="{{ url_for('logistics.list_vehicles') }}">
+          <i data-lucide="car" style="width:16px;height:16px"></i> Vehículos
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'gruas' }}" href="{{ url_for('logistics.list_gruas') }}">
+          <i data-lucide="truck" style="width:16px;height:16px"></i> Grúas
+        </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'employees' }}" href="{{ url_for('logistics.list_employees') }}">
+          <i data-lucide="user-cog" style="width:16px;height:16px"></i> Empleados
+        </a>
         <a class="sidebar-link {{ 'active' if active_view == 'payments' }}" href="{{ url_for('logistics.list_payments') }}">
           <i data-lucide="credit-card" style="width:16px;height:16px"></i> Pagos
         </a>

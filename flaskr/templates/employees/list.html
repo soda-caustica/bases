@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Empleados{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Empleados</h1>
+    <p class="page-subtitle">Choferes registrados y su disponibilidad.</p>
+  </div>
+</div>
+
+<form method="get" class="card table-toolbar" style="margin-bottom:16px;">
+  <input type="text" name="q" placeholder="Buscar por nombre o RUT..." value="{{ filters.q }}" style="max-width:220px;">
+  <select name="disponibilidad" style="max-width:170px;">
+    <option value="">Todos</option>
+    <option value="true" {{ 'selected' if filters.disponibilidad == 'true' }}>Disponibles</option>
+    <option value="false" {{ 'selected' if filters.disponibilidad == 'false' }}>No disponibles</option>
+  </select>
+  <select name="id_comuna" style="max-width:170px;">
+    <option value="">Todas las comunas</option>
+    {% for comuna in communes %}
+      <option value="{{ comuna.id_comuna }}" {{ 'selected' if filters.id_comuna == comuna.id_comuna|string }}>{{ comuna.nombre }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary btn-sm">
+    <i data-lucide="filter" style="width:13px;height:13px"></i> Filtrar
+  </button>
+  <a href="{{ url_for('logistics.list_employees') }}" class="btn btn-ghost btn-sm">Limpiar</a>
+</form>
+
+<div class="card table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>RUT</th>
+        <th>Correo</th>
+        <th>Teléfono</th>
+        <th>Comuna</th>
+        <th>Disponibilidad</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for emp in employees %}
+        <tr>
+          <td class="text-strong">{{ emp.nombre }}</td>
+          <td><span class="mono">{{ emp.rut }}</span></td>
+          <td>{{ emp.email or '-' }}</td>
+          <td>{{ emp.fono or '-' }}</td>
+          <td>{{ emp.comuna or '-' }}</td>
+          <td>
+            {% if emp.disponibilidad %}
+              <span class="badge badge-available">Disponible</span>
+            {% else %}
+              <span class="badge badge-inactive-danger">Ocupado</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-muted">No hay empleados que coincidan con los filtros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

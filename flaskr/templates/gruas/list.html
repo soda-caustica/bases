@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Grúas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Grúas</h1>
+    <p class="page-subtitle">Flota de grúas y su estado operativo.</p>
+  </div>
+</div>
+
+<form method="get" class="card table-toolbar" style="margin-bottom:16px;">
+  <input type="text" name="q" placeholder="Buscar por patente..." value="{{ filters.q }}" style="max-width:220px;">
+  <select name="estado" style="max-width:170px;">
+    <option value="">Todos los estados</option>
+    <option value="disponible" {{ 'selected' if filters.estado == 'disponible' }}>Disponible</option>
+    <option value="en_transito" {{ 'selected' if filters.estado == 'en_transito' }}>En tránsito</option>
+    <option value="mantenimiento" {{ 'selected' if filters.estado == 'mantenimiento' }}>Mantenimiento</option>
+  </select>
+  <select name="id_comuna" style="max-width:170px;">
+    <option value="">Todas las comunas</option>
+    {% for comuna in communes %}
+      <option value="{{ comuna.id_comuna }}" {{ 'selected' if filters.id_comuna == comuna.id_comuna|string }}>{{ comuna.nombre }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary btn-sm">
+    <i data-lucide="filter" style="width:13px;height:13px"></i> Filtrar
+  </button>
+  <a href="{{ url_for('logistics.list_gruas') }}" class="btn btn-ghost btn-sm">Limpiar</a>
+</form>
+
+<div class="grid-3">
+  {% for grua in gruas %}
+    <div class="card resource-card {{ 'available' if grua.estado == 'disponible' else 'unavailable' }}">
+      <div class="resource-row">
+        <div class="resource-info">
+          <div class="resource-icon"><i data-lucide="truck" style="width:17px;height:17px"></i></div>
+          <div>
+            <p style="margin:0; font-weight:600; font-size:14px; color:#0f172a;">{{ grua.patente }}</p>
+            <p style="margin:2px 0 0; font-size:12px; color:#94a3b8;">{{ grua.sucursal or 'Sin sucursal asignada' }}</p>
+          </div>
+        </div>
+        <span class="badge {{ 'badge-available' if grua.estado == 'disponible' else ('badge-en_proceso' if grua.estado == 'en_transito' else 'badge-inactive-danger') }}">
+          {{ (grua.estado or 'sin estado').replace('_', ' ') }}
+        </span>
+      </div>
+      <p style="margin:10px 0 0; font-size:12px; color:#94a3b8;">Comuna: {{ grua.comuna or '-' }}</p>
+    </div>
+  {% else %}
+    <p class="text-muted">No hay grúas que coincidan con los filtros.</p>
+  {% endfor %}
+</div>
+{% endblock %}

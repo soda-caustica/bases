@@ -15,6 +15,20 @@
   {% endif %}
 </div>
 
+<form method="get" class="card table-toolbar" style="margin-bottom:16px;">
+  <input type="text" name="q" placeholder="Buscar por cliente o RUT..." value="{{ filters.q }}" style="max-width:220px;">
+  <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#64748b; margin:0;">Desde
+    <input type="date" name="desde" value="{{ filters.desde }}" style="width:150px;">
+  </label>
+  <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#64748b; margin:0;">Hasta
+    <input type="date" name="hasta" value="{{ filters.hasta }}" style="width:150px;">
+  </label>
+  <button type="submit" class="btn btn-secondary btn-sm">
+    <i data-lucide="filter" style="width:13px;height:13px"></i> Filtrar
+  </button>
+  <a href="{{ url_for('logistics.list_receipts') }}" class="btn btn-ghost btn-sm">Limpiar</a>
+</form>
+
 <div class="card table-card">
   <table class="data-table">
     <thead>
@@ -47,7 +61,7 @@
         </tr>
       {% else %}
         <tr>
-          <td colspan="8" class="text-muted">No hay facturas registradas.</td>
+          <td colspan="8" class="text-muted">No hay facturas que coincidan con los filtros.</td>
         </tr>
       {% endfor %}
     </tbody>

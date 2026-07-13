@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Vehículos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Vehículos</h1>
+    <p class="page-subtitle">Vehículos retirados de órdenes completadas, actualmente en sucursal o en traslado.</p>
+  </div>
+</div>
+
+<form method="get" class="card table-toolbar" style="margin-bottom:16px;">
+  <input type="text" name="q" placeholder="Buscar por patente o cliente..." value="{{ filters.q }}" style="max-width:220px;">
+  <select name="estado" style="max-width:170px;">
+    <option value="">Todos los estados</option>
+    <option value="en_sucursal" {{ 'selected' if filters.estado == 'en_sucursal' }}>En sucursal</option>
+    <option value="en_traslado" {{ 'selected' if filters.estado == 'en_traslado' }}>En traslado</option>
+  </select>
+  <select name="id_comuna" style="max-width:170px;">
+    <option value="">Todas las comunas</option>
+    {% for comuna in communes %}
+      <option value="{{ comuna.id_comuna }}" {{ 'selected' if filters.id_comuna == comuna.id_comuna|string }}>{{ comuna.nombre }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary btn-sm">
+    <i data-lucide="filter" style="width:13px;height:13px"></i> Filtrar
+  </button>
+  <a href="{{ url_for('logistics.list_vehicles') }}" class="btn btn-ghost btn-sm">Limpiar</a>
+</form>
+
+<div class="card table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Patente</th>
+        <th>Tipo</th>
+        <th>Estado</th>
+        <th>Sucursal</th>
+        <th>Comuna</th>
+        <th>Orden</th>
+        <th>Cliente</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in vehicles %}
+        <tr>
+          <td><span class="mono">{{ v.patente }}</span></td>
+          <td class="text-muted" style="font-size:12.5px;">{{ v.tipo or '-' }}</td>
+          <td><span class="badge {{ 'badge-completada' if v.estado == 'en_sucursal' else 'badge-en_proceso' }}">{{ v.estado.replace('_', ' ') }}</span></td>
+          <td>{{ v.sucursal or '-' }}</td>
+          <td>{{ v.comuna or '-' }}</td>
+          <td><span class="mono">#{{ v.numero_de_orden }}</span></td>
+          <td class="text-strong">{{ v.cliente_nombre }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-muted">No hay vehículos que coincidan con los filtros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

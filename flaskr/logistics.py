@@ -86,6 +86,123 @@ def _fetch_recent_orders(limit=5):
     return cur.fetchall()
 
 
+def _find_available_grua(cur, id_comuna_origen):
+    """Busca una grúa disponible, priorizando la sucursal de la comuna de
+    origen, luego cualquier sucursal de la misma región, y por último
+    cualquier grúa disponible en cualquier sucursal."""
+    cur.execute(
+        """
+        SELECT g.patente
+        FROM public.grua g
+        JOIN public.vehiculo v ON v.patente = g.patente
+        JOIN public.sucursal s ON s.id_sucursal = v.id_sucursal_esta
+        WHERE g.estado = 'disponible' AND s.id_comuna = %s
+        LIMIT 1
+        """,
+        (id_comuna_origen,),
+    )
+    row = cur.fetchone()
+    if row:
+        return row.patente
+
+    cur.execute(
+        """
+        SELECT g.patente
+        FROM public.grua g
+        JOIN public.vehiculo v ON v.patente = g.patente
+        JOIN public.sucursal s ON s.id_sucursal = v.id_sucursal_esta
+        JOIN public.comuna com ON com.id_comuna = s.id_comuna
+        WHERE g.estado = 'disponible'
+          AND com.id_region = (SELECT id_region FROM public.comuna WHERE id_comuna = %s)
+        LIMIT 1
+        """,
+        (id_comuna_origen,),
+    )
+    row = cur.fetchone()
+    if row:
+        return row.patente
+
+    cur.execute("SELECT patente FROM public.grua WHERE estado = 'disponible' LIMIT 1")
+    row = cur.fetchone()
+    return row.patente if row else None
+
+
+def _find_available_chofer(cur):
+    """No existe información de sucursal para choferes en el esquema actual,
+    así que se asigna cualquiera disponible."""
+    cur.execute("SELECT rut FROM public.chofer WHERE disponibilidad = true LIMIT 1")
+    row = cur.fetchone()
+    return row.rut if row else None
+
+
+def _assign_resources_to_order(cur, numero_de_orden, id_comuna_origen):
+    """Crea el registro de 'retiro' (despacho) asignando una grúa y un chofer
+    disponibles a la orden recién creada, dejándolos marcados como ocupados.
+    Devuelve un dict con lo asignado, o None si no había recursos libres."""
+    patente_grua = _find_available_grua(cur, id_comuna_origen)
+    rut_chofer = _find_available_chofer(cur)
+    if patente_grua is None or rut_chofer is None:
+        return None
+
+    cur.execute("SELECT COALESCE(MAX(id_retiro), 0) + 1 FROM public.retiro")
+    next_retiro = cur.fetchone()[0]
+    cur.execute(
+        """
+        INSERT INTO public.retiro (id_retiro, fecha_hora, estado, rut_chofer, numero_de_orden)
+        VALUES (%s, NOW(), 'realizado', %s, %s)
+        """,
+        (next_retiro, rut_chofer, numero_de_orden),
+    )
+    cur.execute(
+        "INSERT INTO public.grua_retiro (patente_grua, id_retiro) VALUES (%s, %s)",
+        (patente_grua, next_retiro),
+    )
+    cur.execute("UPDATE public.grua SET estado = 'en_transito' WHERE patente = %s", (patente_grua,))
+    cur.execute("UPDATE public.chofer SET disponibilidad = false WHERE rut = %s", (rut_chofer,))
+    return {'patente_grua': patente_grua, 'rut_chofer': rut_chofer, 'id_retiro': next_retiro}
+
+
+def _release_resources_for_order(cur, numero_de_orden):
+    """Al completar/cancelar una orden, libera la(s) grúa(s) y chofer(es)
+    que quedaron asociados a sus despachos (retiro) para que vuelvan a
+    estar disponibles."""
+    cur.execute(
+        """
+        SELECT gr.patente_grua, r.rut_chofer
+        FROM public.retiro r
+        JOIN public.grua_retiro gr ON gr.id_retiro = r.id_retiro
+        WHERE r.numero_de_orden = %s AND r.estado = 'realizado'
+        """,
+        (numero_de_orden,),
+    )
+    rows = cur.fetchall()
+    for row in rows:
+        cur.execute(
+            "UPDATE public.grua SET estado = 'disponible' WHERE patente = %s AND estado = 'en_transito'",
+            (row.patente_grua,),
+        )
+        cur.execute("UPDATE public.chofer SET disponibilidad = true WHERE rut = %s", (row.rut_chofer,))
+
+
+def _fetch_order_dispatch(cur, numero_de_orden):
+    """Devuelve la grúa y el chofer asignados (si existen) a una orden."""
+    cur.execute(
+        """
+        SELECT r.id_retiro, r.fecha_hora, r.estado AS retiro_estado,
+               gr.patente_grua, r.rut_chofer,
+               p.nombre AS chofer_nombre
+        FROM public.retiro r
+        JOIN public.grua_retiro gr ON gr.id_retiro = r.id_retiro
+        LEFT JOIN public.persona p ON p.rut = r.rut_chofer
+        WHERE r.numero_de_orden = %s
+        ORDER BY r.fecha_hora DESC
+        LIMIT 1
+        """,
+        (numero_de_orden,),
+    )
+    return cur.fetchone()
+
+
 @bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -158,50 +275,57 @@ def dashboard():
 def list_orders():
     db = get_db()
     cur = db.cursor()
-    if _is_admin():
-        cur.execute(
-            """
-            SELECT o.numero_de_orden,
-                   o.fecha,
-                   o.estado,
-                   o.monto_base,
-                   o.direccion_origen,
-                   o.direccion_destino,
-                   o.rut_cliente,
-                   COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
-                   CASE WHEN f.numero_de_factura IS NULL THEN false ELSE true END AS tiene_factura
-            FROM public.ordenderetiro o
-            JOIN public.cliente c ON c.rut = o.rut_cliente
-            LEFT JOIN public.persona p ON p.rut = c.rut
-            LEFT JOIN public.empresa e ON e.rut = c.rut
-            LEFT JOIN public.factura f ON f.numero_de_orden = o.numero_de_orden
-            ORDER BY o.fecha DESC, o.numero_de_orden DESC
-            """
-        )
-    else:
-        cur.execute(
-            """
-            SELECT o.numero_de_orden,
-                   o.fecha,
-                   o.estado,
-                   o.monto_base,
-                   o.direccion_origen,
-                   o.direccion_destino,
-                   o.rut_cliente,
-                   COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
-                   CASE WHEN f.numero_de_factura IS NULL THEN false ELSE true END AS tiene_factura
-            FROM public.ordenderetiro o
-            JOIN public.cliente c ON c.rut = o.rut_cliente
-            LEFT JOIN public.persona p ON p.rut = c.rut
-            LEFT JOIN public.empresa e ON e.rut = c.rut
-            LEFT JOIN public.factura f ON f.numero_de_orden = o.numero_de_orden
-            WHERE o.rut_cliente = %s
-            ORDER BY o.fecha DESC, o.numero_de_orden DESC
-            """,
-            (g.user['rut'],),
-        )
+
+    filtro_estado = request.args.get('estado', '').strip()
+    filtro_desde = request.args.get('desde', '').strip()
+    filtro_hasta = request.args.get('hasta', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
+    query = """
+        SELECT o.numero_de_orden,
+               o.fecha,
+               o.estado,
+               o.monto_base,
+               o.direccion_origen,
+               o.direccion_destino,
+               o.rut_cliente,
+               COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
+               CASE WHEN f.numero_de_factura IS NULL THEN false ELSE true END AS tiene_factura
+        FROM public.ordenderetiro o
+        JOIN public.cliente c ON c.rut = o.rut_cliente
+        LEFT JOIN public.persona p ON p.rut = c.rut
+        LEFT JOIN public.empresa e ON e.rut = c.rut
+        LEFT JOIN public.factura f ON f.numero_de_orden = o.numero_de_orden
+        WHERE 1 = 1
+    """
+    params = []
+
+    if not _is_admin():
+        query += " AND o.rut_cliente = %s"
+        params.append(g.user['rut'])
+    if filtro_estado:
+        query += " AND o.estado = %s"
+        params.append(filtro_estado)
+    if filtro_desde:
+        query += " AND o.fecha >= %s"
+        params.append(filtro_desde)
+    if filtro_hasta:
+        query += " AND o.fecha <= %s"
+        params.append(filtro_hasta)
+    if filtro_busqueda:
+        query += " AND (o.rut_cliente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
+        like = '%{}%'.format(filtro_busqueda)
+        params.extend([like, like, like])
+
+    query += " ORDER BY o.fecha DESC, o.numero_de_orden DESC"
+    cur.execute(query, params)
     orders = cur.fetchall()
-    return render_template('orders/list.html', orders=orders)
+    return render_template(
+        'orders/list.html',
+        orders=orders,
+        states=ORDER_STATES,
+        filters={'estado': filtro_estado, 'desde': filtro_desde, 'hasta': filtro_hasta, 'q': filtro_busqueda},
+    )
 
 
 @bp.route('/orders/create', methods=('GET', 'POST'))
@@ -265,8 +389,16 @@ def create_order():
                         int(id_comuna_origen), int(id_comuna_destino),
                     ),
                 )
+                assignment = _assign_resources_to_order(cur, int(numero), int(id_comuna_origen))
                 db.commit()
-                flash('Orden de retiro creada correctamente.')
+                if assignment:
+                    flash(
+                        'Orden de retiro creada correctamente. Grúa {} y chofer {} asignados.'.format(
+                            assignment['patente_grua'], assignment['rut_chofer']
+                        )
+                    )
+                else:
+                    flash('Orden de retiro creada correctamente. No había grúas o choferes disponibles; asígnalos manualmente más tarde.')
                 return redirect(url_for('logistics.list_orders'))
             except Exception:
                 db.rollback()
@@ -319,8 +451,65 @@ def order_detail(order_id):
         (order_id,),
     )
     receipt = cur.fetchone()
+    dispatch = _fetch_order_dispatch(cur, order_id)
 
-    return render_template('orders/detail.html', order=order_record, receipt=receipt, is_admin=_is_admin())
+    return render_template(
+        'orders/detail.html',
+        order=order_record,
+        receipt=receipt,
+        dispatch=dispatch,
+        is_admin=_is_admin(),
+        states=ORDER_STATES,
+    )
+
+
+@bp.route('/orders/<int:order_id>/status', methods=('POST',))
+@admin_required
+def update_order_status(order_id):
+    db = get_db()
+    cur = db.cursor()
+    new_status = request.form.get('estado', '').strip()
+    valid_states = {value for value, _ in ORDER_STATES}
+    if new_status not in valid_states:
+        flash('Estado no válido.')
+        return redirect(url_for('logistics.order_detail', order_id=order_id))
+
+    try:
+        cur.execute(
+            "UPDATE public.ordenderetiro SET estado = %s WHERE numero_de_orden = %s",
+            (new_status, order_id),
+        )
+        if new_status in ('completada', 'cancelada'):
+            _release_resources_for_order(cur, order_id)
+        db.commit()
+        flash('Estado de la orden actualizado.')
+    except Exception:
+        db.rollback()
+        flash('No se pudo actualizar el estado de la orden.')
+
+    return redirect(url_for('logistics.order_detail', order_id=order_id))
+
+
+@bp.route('/orders/<int:order_id>/assign', methods=('POST',))
+@admin_required
+def assign_order_resources(order_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id_comuna_origen FROM public.ordenderetiro WHERE numero_de_orden = %s", (order_id,))
+    row = cur.fetchone()
+    if row is None:
+        abort(404)
+    try:
+        assignment = _assign_resources_to_order(cur, order_id, row.id_comuna_origen)
+        db.commit()
+        if assignment:
+            flash('Grúa {} y chofer {} asignados a la orden.'.format(assignment['patente_grua'], assignment['rut_chofer']))
+        else:
+            flash('No hay grúas o choferes disponibles en este momento.')
+    except Exception:
+        db.rollback()
+        flash('No se pudo realizar la asignación.')
+    return redirect(url_for('logistics.order_detail', order_id=order_id))
 
 
 @bp.route('/receipts')
@@ -328,46 +517,50 @@ def order_detail(order_id):
 def list_receipts():
     db = get_db()
     cur = db.cursor()
-    if _is_admin():
-        cur.execute(
-            """
-            SELECT f.numero_de_factura,
-                   f.fecha,
-                   f.monto_total,
-                   f.metodo_de_pago,
-                   f.numero_de_orden,
-                   o.estado AS orden_estado,
-                   COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre
-            FROM public.factura f
-            JOIN public.ordenderetiro o ON o.numero_de_orden = f.numero_de_orden
-            JOIN public.cliente c ON c.rut = o.rut_cliente
-            LEFT JOIN public.persona p ON p.rut = c.rut
-            LEFT JOIN public.empresa e ON e.rut = c.rut
-            ORDER BY f.fecha DESC, f.numero_de_factura DESC
-            """
-        )
-    else:
-        cur.execute(
-            """
-            SELECT f.numero_de_factura,
-                   f.fecha,
-                   f.monto_total,
-                   f.metodo_de_pago,
-                   f.numero_de_orden,
-                   o.estado AS orden_estado,
-                   COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre
-            FROM public.factura f
-            JOIN public.ordenderetiro o ON o.numero_de_orden = f.numero_de_orden
-            JOIN public.cliente c ON c.rut = o.rut_cliente
-            LEFT JOIN public.persona p ON p.rut = c.rut
-            LEFT JOIN public.empresa e ON e.rut = c.rut
-            WHERE o.rut_cliente = %s
-            ORDER BY f.fecha DESC, f.numero_de_factura DESC
-            """,
-            (g.user['rut'],),
-        )
+
+    filtro_desde = request.args.get('desde', '').strip()
+    filtro_hasta = request.args.get('hasta', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
+    query = """
+        SELECT f.numero_de_factura,
+               f.fecha,
+               f.monto_total,
+               f.metodo_de_pago,
+               f.numero_de_orden,
+               o.estado AS orden_estado,
+               COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre
+        FROM public.factura f
+        JOIN public.ordenderetiro o ON o.numero_de_orden = f.numero_de_orden
+        JOIN public.cliente c ON c.rut = o.rut_cliente
+        LEFT JOIN public.persona p ON p.rut = c.rut
+        LEFT JOIN public.empresa e ON e.rut = c.rut
+        WHERE 1 = 1
+    """
+    params = []
+    if not _is_admin():
+        query += " AND o.rut_cliente = %s"
+        params.append(g.user['rut'])
+    if filtro_desde:
+        query += " AND f.fecha >= %s"
+        params.append(filtro_desde)
+    if filtro_hasta:
+        query += " AND f.fecha <= %s"
+        params.append(filtro_hasta)
+    if filtro_busqueda:
+        query += " AND (o.rut_cliente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
+        like = '%{}%'.format(filtro_busqueda)
+        params.extend([like, like, like])
+
+    query += " ORDER BY f.fecha DESC, f.numero_de_factura DESC"
+    cur.execute(query, params)
     receipts = cur.fetchall()
-    return render_template('receipts/list.html', receipts=receipts, is_admin=_is_admin())
+    return render_template(
+        'receipts/list.html',
+        receipts=receipts,
+        is_admin=_is_admin(),
+        filters={'desde': filtro_desde, 'hasta': filtro_hasta, 'q': filtro_busqueda},
+    )
 
 
 @bp.route('/receipts/create', methods=('GET', 'POST'))
@@ -476,6 +669,11 @@ def receipt_detail(receipt_id):
 def list_payments():
     db = get_db()
     cur = db.cursor()
+    filtro_estado_pago = request.args.get('estado_pago', '').strip()  # 'pagado' / 'pendiente'
+    filtro_desde = request.args.get('desde', '').strip()
+    filtro_hasta = request.args.get('hasta', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
     base_query = """
         SELECT o.numero_de_orden, o.fecha, o.monto_base, o.estado,
                COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
@@ -485,18 +683,41 @@ def list_payments():
         LEFT JOIN public.persona p ON p.rut = c.rut
         LEFT JOIN public.empresa e ON e.rut = c.rut
         LEFT JOIN public.factura f ON f.numero_de_orden = o.numero_de_orden
+        WHERE 1 = 1
     """
-    if _is_admin():
-        cur.execute(base_query + " ORDER BY o.fecha DESC, o.numero_de_orden DESC")
-    else:
-        cur.execute(base_query + " WHERE o.rut_cliente = %s ORDER BY o.fecha DESC, o.numero_de_orden DESC",
-                    (g.user['rut'],))
+    params = []
+    if not _is_admin():
+        base_query += " AND o.rut_cliente = %s"
+        params.append(g.user['rut'])
+    if filtro_estado_pago == 'pagado':
+        base_query += " AND f.numero_de_factura IS NOT NULL"
+    elif filtro_estado_pago == 'pendiente':
+        base_query += " AND f.numero_de_factura IS NULL"
+    if filtro_desde:
+        base_query += " AND o.fecha >= %s"
+        params.append(filtro_desde)
+    if filtro_hasta:
+        base_query += " AND o.fecha <= %s"
+        params.append(filtro_hasta)
+    if filtro_busqueda:
+        base_query += " AND (o.rut_cliente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
+        like = '%{}%'.format(filtro_busqueda)
+        params.extend([like, like, like])
+
+    base_query += " ORDER BY o.fecha DESC, o.numero_de_orden DESC"
+    cur.execute(base_query, params)
     rows = cur.fetchall()
 
     pending_total = sum(float(r.monto_base) for r in rows if r.numero_de_factura is None)
     paid_total = sum(float(r.monto_base) for r in rows if r.numero_de_factura is not None)
 
-    return render_template('payments/list.html', rows=rows, pending_total=pending_total, paid_total=paid_total)
+    return render_template(
+        'payments/list.html',
+        rows=rows,
+        pending_total=pending_total,
+        paid_total=paid_total,
+        filters={'estado_pago': filtro_estado_pago, 'desde': filtro_desde, 'hasta': filtro_hasta, 'q': filtro_busqueda},
+    )
 
 
 @bp.route('/payments/<int:order_id>/pay', methods=('GET', 'POST'))
@@ -562,21 +783,197 @@ def pay_order(order_id):
 def list_clients():
     db = get_db()
     cur = db.cursor()
-    cur.execute(
-        """
+
+    filtro_tipo = request.args.get('tipo', '').strip()  # 'persona' / 'empresa'
+    filtro_comuna = request.args.get('id_comuna', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
+    query = """
         SELECT c.rut,
                COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
                c.email,
                c.fono,
                c.direccion_residencia,
                com.nombre AS comuna,
+               c.id_comuna,
                CASE WHEN e.rut IS NULL THEN 'Persona' ELSE 'Empresa' END AS tipo
         FROM public.cliente c
         LEFT JOIN public.persona p ON p.rut = c.rut
         LEFT JOIN public.empresa e ON e.rut = c.rut
         JOIN public.comuna com ON c.id_comuna = com.id_comuna
-        ORDER BY cliente_nombre
-        """
-    )
+        WHERE 1 = 1
+    """
+    params = []
+    if filtro_tipo == 'persona':
+        query += " AND e.rut IS NULL"
+    elif filtro_tipo == 'empresa':
+        query += " AND e.rut IS NOT NULL"
+    if filtro_comuna.isdigit():
+        query += " AND c.id_comuna = %s"
+        params.append(int(filtro_comuna))
+    if filtro_busqueda:
+        query += " AND (c.rut ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
+        like = '%{}%'.format(filtro_busqueda)
+        params.extend([like, like, like])
+
+    query += " ORDER BY cliente_nombre"
+    cur.execute(query, params)
     clients = cur.fetchall()
-    return render_template('clients/list.html', clients=clients)
+
+    cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
+    communes = cur.fetchall()
+
+    return render_template(
+        'clients/list.html',
+        clients=clients,
+        communes=communes,
+        filters={'tipo': filtro_tipo, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
+    )
+
+
+@bp.route('/vehicles')
+@admin_required
+def list_vehicles():
+    """Vehículos retirables de órdenes ya completadas: lo que la empresa
+    tiene actualmente en sus instalaciones (o en traslado hacia ellas)."""
+    db = get_db()
+    cur = db.cursor()
+
+    filtro_estado = request.args.get('estado', '').strip()
+    filtro_comuna = request.args.get('id_comuna', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
+    query = """
+        SELECT vr.patente, vr.tipo, vr.observacion, vr.estado,
+               s.nombre AS sucursal, com.nombre AS comuna, com.id_comuna,
+               o.numero_de_orden,
+               COALESCE(p.nombre, e.razon_social, cl.email, cl.rut) AS cliente_nombre
+        FROM public.vehiculoretirable vr
+        JOIN public.vehiculo v ON v.patente = vr.patente
+        LEFT JOIN public.sucursal s ON s.id_sucursal = v.id_sucursal_esta
+        LEFT JOIN public.comuna com ON com.id_comuna = s.id_comuna
+        JOIN public.vehiculoretirable_orden vro ON vro.patente_vehiculo = vr.patente
+        JOIN public.ordenderetiro o ON o.numero_de_orden = vro.numero_de_orden
+        JOIN public.cliente cl ON cl.rut = o.rut_cliente
+        LEFT JOIN public.persona p ON p.rut = cl.rut
+        LEFT JOIN public.empresa e ON e.rut = cl.rut
+        WHERE o.estado = 'completada'
+    """
+    params = []
+    if filtro_estado:
+        query += " AND vr.estado = %s"
+        params.append(filtro_estado)
+    if filtro_comuna.isdigit():
+        query += " AND com.id_comuna = %s"
+        params.append(int(filtro_comuna))
+    if filtro_busqueda:
+        query += " AND (vr.patente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
+        like = '%{}%'.format(filtro_busqueda)
+        params.extend([like, like, like])
+
+    query += " ORDER BY vr.patente"
+    cur.execute(query, params)
+    vehicles = cur.fetchall()
+
+    cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
+    communes = cur.fetchall()
+
+    return render_template(
+        'vehicles/list.html',
+        vehicles=vehicles,
+        communes=communes,
+        filters={'estado': filtro_estado, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
+    )
+
+
+@bp.route('/gruas')
+@admin_required
+def list_gruas():
+    db = get_db()
+    cur = db.cursor()
+
+    filtro_estado = request.args.get('estado', '').strip()
+    filtro_comuna = request.args.get('id_comuna', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
+    query = """
+        SELECT g.patente, g.estado,
+               s.nombre AS sucursal, com.nombre AS comuna, com.id_comuna
+        FROM public.grua g
+        JOIN public.vehiculo v ON v.patente = g.patente
+        LEFT JOIN public.sucursal s ON s.id_sucursal = v.id_sucursal_esta
+        LEFT JOIN public.comuna com ON com.id_comuna = s.id_comuna
+        WHERE 1 = 1
+    """
+    params = []
+    if filtro_estado:
+        query += " AND g.estado = %s"
+        params.append(filtro_estado)
+    if filtro_comuna.isdigit():
+        query += " AND com.id_comuna = %s"
+        params.append(int(filtro_comuna))
+    if filtro_busqueda:
+        query += " AND g.patente ILIKE %s"
+        params.append('%{}%'.format(filtro_busqueda))
+
+    query += " ORDER BY g.patente"
+    cur.execute(query, params)
+    gruas = cur.fetchall()
+
+    cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
+    communes = cur.fetchall()
+
+    return render_template(
+        'gruas/list.html',
+        gruas=gruas,
+        communes=communes,
+        filters={'estado': filtro_estado, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
+    )
+
+
+@bp.route('/employees')
+@admin_required
+def list_employees():
+    """Choferes registrados. Se llama 'Empleados' para poder escalar a
+    futuro a otros tipos de personal sin cambiar el nombre de la sección."""
+    db = get_db()
+    cur = db.cursor()
+
+    filtro_disponibilidad = request.args.get('disponibilidad', '').strip()  # 'true' / 'false'
+    filtro_comuna = request.args.get('id_comuna', '').strip()
+    filtro_busqueda = request.args.get('q', '').strip()
+
+    query = """
+        SELECT ch.rut, ch.disponibilidad,
+               p.nombre, cl.email, cl.fono, com.nombre AS comuna, com.id_comuna
+        FROM public.chofer ch
+        JOIN public.persona p ON p.rut = ch.rut
+        JOIN public.cliente cl ON cl.rut = ch.rut
+        LEFT JOIN public.comuna com ON com.id_comuna = cl.id_comuna
+        WHERE 1 = 1
+    """
+    params = []
+    if filtro_disponibilidad in ('true', 'false'):
+        query += " AND ch.disponibilidad = %s"
+        params.append(filtro_disponibilidad == 'true')
+    if filtro_comuna.isdigit():
+        query += " AND cl.id_comuna = %s"
+        params.append(int(filtro_comuna))
+    if filtro_busqueda:
+        query += " AND (ch.rut ILIKE %s OR p.nombre ILIKE %s)"
+        like = '%{}%'.format(filtro_busqueda)
+        params.extend([like, like])
+
+    query += " ORDER BY p.nombre"
+    cur.execute(query, params)
+    employees = cur.fetchall()
+
+    cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
+    communes = cur.fetchall()
+
+    return render_template(
+        'employees/list.html',
+        employees=employees,
+        communes=communes,
+        filters={'disponibilidad': filtro_disponibilidad, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
+    )

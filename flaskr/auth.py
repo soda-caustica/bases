@@ -3,15 +3,16 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from .db import get_db
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 # Credenciales de administrador.
-# TODO: mover a una tabla de usuarios administradores con contraseña hasheada.
+# TODO: mover a una tabla de usuarios administradores propia.
 ADMIN_RUT = '21983444-6'
-ADMIN_PASSWORD = '123456'
+ADMIN_PASSWORD_HASH = generate_password_hash('123456')
 ADMIN_NAME = 'Máximo Beltrán'
 
 
@@ -23,7 +24,7 @@ def login():
         error = None
 
         if rut == ADMIN_RUT:
-            if password != ADMIN_PASSWORD:
+            if not check_password_hash(ADMIN_PASSWORD_HASH, password):
                 error = 'Contraseña incorrecta.'
             if error is None:
                 session.clear()
@@ -36,11 +37,12 @@ def login():
             cur = db.cursor()
             cur.execute(
                 """
-                SELECT c.rut, c.password,
+                SELECT c.rut, cc.password,
                        COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS nombre
                 FROM public.cliente c
                 LEFT JOIN public.persona p ON p.rut = c.rut
                 LEFT JOIN public.empresa e ON e.rut = c.rut
+                LEFT JOIN public.credencial_cliente cc ON cc.rut_cliente = c.rut
                 WHERE c.rut = %s
                 """,
                 (rut,),
@@ -48,7 +50,7 @@ def login():
             client = cur.fetchone()
             if client is None:
                 error = 'RUT no encontrado. ¿Necesitas crear una cuenta?'
-            elif client.password is None or client.password != password:
+            elif client.password is None or not check_password_hash(client.password, password):
                 error = 'Contraseña incorrecta.'
 
             if error is None:
@@ -107,10 +109,10 @@ def register():
             try:
                 cur.execute(
                     """
-                    INSERT INTO public.cliente (rut, email, fono, direccion_residencia, id_comuna, password)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO public.cliente (rut, email, fono, direccion_residencia, id_comuna)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (rut, email, fono, direccion, int(id_comuna), password),
+                    (rut, email, fono, direccion, int(id_comuna)),
                 )
                 if tipo == 'empresa':
                     cur.execute(
@@ -122,6 +124,10 @@ def register():
                         "INSERT INTO public.persona (rut, nombre) VALUES (%s, %s)",
                         (rut, nombre),
                     )
+                cur.execute(
+                    "INSERT INTO public.credencial_cliente (rut_cliente, password) VALUES (%s, %s)",
+                    (rut, generate_password_hash(password)),
+                )
                 db.commit()
 
                 session.clear()

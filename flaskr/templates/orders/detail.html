@@ -24,6 +24,42 @@
   </div>
 </div>
 
+<div class="card panel" style="margin-bottom:16px;">
+  <h3>Grúa y Chofer Asignados</h3>
+  {% if dispatch %}
+    <div class="form-grid" style="margin-bottom:0;">
+      <div><label>Grúa</label><p class="text-strong mono">{{ dispatch.patente_grua }}</p></div>
+      <div><label>Chofer</label><p class="text-strong">{{ dispatch.chofer_nombre or dispatch.rut_chofer }}</p></div>
+      <div><label>Fecha de despacho</label><p>{{ dispatch.fecha_hora }}</p></div>
+      <div><label>Estado del despacho</label><p><span class="badge {{ 'badge-completada' if dispatch.retiro_estado == 'realizado' else 'badge-cancelada' }}">{{ dispatch.retiro_estado }}</span></p></div>
+    </div>
+  {% else %}
+    <p style="font-size:13px; color:#64748b; margin:0 0 12px;">Esta orden todavía no tiene grúa ni chofer asignados (no había recursos disponibles).</p>
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('logistics.assign_order_resources', order_id=order.numero_de_orden) }}">
+      <button type="submit" class="btn btn-secondary">
+        <i data-lucide="truck" style="width:14px;height:14px"></i> Intentar asignar ahora
+      </button>
+    </form>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% if is_admin %}
+<div class="card panel" style="margin-bottom:16px;">
+  <h3>Actualizar Estado de la Orden</h3>
+  <form method="post" action="{{ url_for('logistics.update_order_status', order_id=order.numero_de_orden) }}" style="display:flex; gap:10px; align-items:center;">
+    <select name="estado" style="max-width:200px;">
+      {% for value, label in states %}
+        <option value="{{ value }}" {{ 'selected' if order.estado == value }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Guardar estado</button>
+  </form>
+  <p style="font-size:12px; color:#94a3b8; margin:10px 0 0;">Al marcar la orden como "Completada" o "Cancelada" se libera automáticamente la grúa y el chofer asignados.</p>
+</div>
+{% endif %}
+
 {% if receipt %}
   <div class="card panel" style="margin-bottom:16px;">
     <h3>Factura Asociada</h3>

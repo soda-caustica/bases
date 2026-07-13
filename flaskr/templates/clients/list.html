@@ -6,9 +6,28 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Clientes</h1>
-    <p class="page-subtitle">{{ clients|length }} clientes registrados.</p>
+    <p class="page-subtitle">{{ clients|length }} clientes encontrados.</p>
   </div>
 </div>
+
+<form method="get" class="card table-toolbar" style="margin-bottom:16px;">
+  <input type="text" name="q" placeholder="Buscar por nombre o RUT..." value="{{ filters.q }}" style="max-width:220px;">
+  <select name="tipo" style="max-width:160px;">
+    <option value="">Persona o Empresa</option>
+    <option value="persona" {{ 'selected' if filters.tipo == 'persona' }}>Persona</option>
+    <option value="empresa" {{ 'selected' if filters.tipo == 'empresa' }}>Empresa</option>
+  </select>
+  <select name="id_comuna" style="max-width:170px;">
+    <option value="">Todas las comunas</option>
+    {% for comuna in communes %}
+      <option value="{{ comuna.id_comuna }}" {{ 'selected' if filters.id_comuna == comuna.id_comuna|string }}>{{ comuna.nombre }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-secondary btn-sm">
+    <i data-lucide="filter" style="width:13px;height:13px"></i> Filtrar
+  </button>
+  <a href="{{ url_for('logistics.list_clients') }}" class="btn btn-ghost btn-sm">Limpiar</a>
+</form>
 
 <div class="card table-card">
   <table class="data-table">
@@ -36,7 +55,7 @@
         </tr>
       {% else %}
         <tr>
-          <td colspan="7" class="text-muted">No hay clientes registrados.</td>
+          <td colspan="7" class="text-muted">No hay clientes que coincidan con los filtros.</td>
         </tr>
       {% endfor %}
     </tbody>

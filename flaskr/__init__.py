@@ -31,6 +31,9 @@ def create_app(test_config=None):
             'logistics.list_receipts': 'receipts',
             'logistics.create_receipt': 'receipts',
             'logistics.receipt_detail': 'receipts',
+            'logistics.list_vehicles': 'vehicles',
+            'logistics.list_gruas': 'gruas',
+            'logistics.list_employees': 'employees',
         }
         return {'active_view': endpoint_map.get(request.endpoint)}
 

@@ -11,9 +11,6 @@
     <button class="btn btn-secondary" onclick="window.print()">
       <i data-lucide="printer" style="width:14px;height:14px"></i> Imprimir
     </button>
-    <a class="btn btn-secondary" href="mailto:{{ invoice.cliente_email or '' }}?subject=Factura%20%23{{ invoice.numero_de_factura }}">
-      <i data-lucide="send" style="width:14px;height:14px"></i> Enviar por correo
-    </a>
     <button class="btn btn-primary" onclick="window.print()">
       <i data-lucide="download" style="width:14px;height:14px"></i> Descargar PDF
     </button>
