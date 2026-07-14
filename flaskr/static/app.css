@@ -181,6 +181,17 @@ a { text-decoration: none; color: inherit; }
   padding: 20px 22px;
   display: flex; flex-direction: column; gap: 12px;
 }
+a.kpi-card {
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+a.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
 .kpi-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .kpi-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
 .kpi-value { font-size: 26px; font-weight: 700; color: #0f172a; line-height: 1.2; display: block; }
@@ -376,3 +387,31 @@ label { font-size: 12.5px; font-weight: 500; color: #374151; display: block; mar
 .grid-2-3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 @media (max-width: 1000px) { .grid-2, .grid-2-3-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Indicator for unsaved/unapplied filters on the Filter button */
+.btn-filter-highlight {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+  position: relative;
+}
+
+.btn-filter-highlight::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  background-color: #2563eb;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}

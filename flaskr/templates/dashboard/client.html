@@ -14,30 +14,30 @@
 </div>
 
 <div class="kpi-grid">
-  <div class="card kpi-card">
+  <a href="{{ url_for('logistics.list_orders') }}" class="card kpi-card">
     <div class="kpi-card-top">
       <div><span class="kpi-label">Solicitudes Activas</span><span class="kpi-value">{{ my_orders|selectattr('estado', 'in', ['pendiente','en_proceso'])|list|length }}</span></div>
       <div class="kpi-icon" style="background:#3b82f6;"><i data-lucide="clipboard-list" style="width:18px;height:18px"></i></div>
     </div>
-  </div>
-  <div class="card kpi-card">
+  </a>
+  <a href="{{ url_for('logistics.list_orders', estado='completada') }}" class="card kpi-card">
     <div class="kpi-card-top">
       <div><span class="kpi-label">Servicios Completados</span><span class="kpi-value">{{ completed_count }}</span></div>
       <div class="kpi-icon" style="background:#10b981;"><i data-lucide="check-square" style="width:18px;height:18px"></i></div>
     </div>
-  </div>
-  <div class="card kpi-card">
+  </a>
+  <a href="{{ url_for('logistics.list_payments', estado_pago='pendiente') }}" class="card kpi-card">
     <div class="kpi-card-top">
       <div><span class="kpi-label">Facturas Pendientes</span><span class="kpi-value">{{ pending_invoices_count }}</span></div>
       <div class="kpi-icon" style="background:#f59e0b;"><i data-lucide="file-text" style="width:18px;height:18px"></i></div>
     </div>
-  </div>
-  <div class="card kpi-card">
+  </a>
+  <a href="{{ url_for('logistics.list_payments', estado_pago='pagado') }}" class="card kpi-card">
     <div class="kpi-card-top">
       <div><span class="kpi-label">Total Pagado</span><span class="kpi-value">${{ '{:,.0f}'.format(total_paid) }}</span></div>
       <div class="kpi-icon" style="background:#8b5cf6;"><i data-lucide="credit-card" style="width:18px;height:18px"></i></div>
     </div>
-  </div>
+  </a>
 </div>
 
 <div class="grid-2-3-2">

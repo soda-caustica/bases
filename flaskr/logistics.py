@@ -706,8 +706,21 @@ def list_payments():
     cur.execute(base_query, params)
     rows = cur.fetchall()
 
-    pending_total = sum(float(r.monto_base) for r in rows if r.numero_de_factura is None)
-    paid_total = sum(float(r.monto_base) for r in rows if r.numero_de_factura is not None)
+    # Calcular totales globales (independientes de los filtros de fecha, estado y búsqueda)
+    tot_query = """
+        SELECT o.monto_base, f.numero_de_factura
+        FROM public.ordenderetiro o
+        LEFT JOIN public.factura f ON f.numero_de_orden = o.numero_de_orden
+    """
+    tot_params = []
+    if not _is_admin():
+        tot_query += " WHERE o.rut_cliente = %s"
+        tot_params.append(g.user['rut'])
+    cur.execute(tot_query, tot_params)
+    all_rows = cur.fetchall()
+
+    pending_total = sum(float(r.monto_base) for r in all_rows if r.numero_de_factura is None)
+    paid_total = sum(float(r.monto_base) for r in all_rows if r.numero_de_factura is not None)
 
     return render_template(
         'payments/list.html',

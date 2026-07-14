@@ -104,6 +104,40 @@
 
 <script>
   if (window.lucide) { lucide.createIcons(); }
+
+  // Detect unsaved/unapplied filters in table forms
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterForms = document.querySelectorAll('form.table-toolbar');
+    filterForms.forEach(form => {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (!submitBtn) return;
+
+      const inputs = form.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        input.dataset.initialValue = input.value || '';
+      });
+
+      function checkFormDirty() {
+        let isDirty = false;
+        inputs.forEach(input => {
+          const current = (input.value || '').trim();
+          const initial = (input.dataset.initialValue || '').trim();
+          if (current !== initial) {
+            isDirty = true;
+          }
+        });
+
+        if (isDirty) {
+          submitBtn.classList.add('btn-filter-highlight');
+        } else {
+          submitBtn.classList.remove('btn-filter-highlight');
+        }
+      }
+
+      form.addEventListener('input', checkFormDirty);
+      form.addEventListener('change', checkFormDirty);
+    });
+  });
 </script>
 </body>
 </html>
