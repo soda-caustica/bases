@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Sucursales{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Sucursales</h1>
+    <p class="page-subtitle">Puntos físicos de almacenamiento y gestión de flota.</p>
+  </div>
+</div>
+
+<div class="card table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Dirección</th>
+        <th>Comuna</th>
+        <th class="text-center">Grúas Almacenadas</th>
+        <th class="text-center">Vehículos en Custodia</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sucursales %}
+        <tr>
+          <td class="text-strong">{{ s.nombre }}</td>
+          <td>{{ s.direccion }}</td>
+          <td class="text-muted">{{ s.comuna }}</td>
+          <td class="text-center text-strong">
+            <span class="badge" style="background-color:#eff6ff; color:#1d4ed8; font-weight:600; font-size:12.5px; border:1px solid #bfdbfe;">
+              <i data-lucide="truck" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>{{ s.cant_gruas }}
+            </span>
+          </td>
+          <td class="text-center text-strong">
+            <span class="badge" style="background-color:#f0fdf4; color:#166534; font-weight:600; font-size:12.5px; border:1px solid #bbf7d0;">
+              <i data-lucide="car" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>{{ s.cant_retirables }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('logistics.sucursal_detail', sucursal_id=s.id_sucursal) }}" class="btn btn-ghost btn-sm">
+              <i data-lucide="eye" style="width:13px;height:13px"></i> Ver Inventario
+            </a>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6" class="text-muted">No se encontraron sucursales registradas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -22,10 +22,10 @@
     {% endfor %}
   </select>
   {% if g.user.role == 'admin' %}
-  <select name="con_retiro" style="max-width:150px;">
-    <option value="">Retiro físico...</option>
-    <option value="con_retiro" {{ 'selected' if filters.con_retiro == 'con_retiro' }}>Con retiro físico</option>
-    <option value="sin_retiro" {{ 'selected' if filters.con_retiro == 'sin_retiro' }}>Sin retiro físico</option>
+  <select name="con_retiro" style="max-width:170px;">
+    <option value="">Retiro asignado...</option>
+    <option value="con_retiro" {{ 'selected' if filters.con_retiro == 'con_retiro' }}>Con retiro asignado</option>
+    <option value="sin_retiro" {{ 'selected' if filters.con_retiro == 'sin_retiro' }}>Sin retiro asignado</option>
   </select>
   <select name="rut_chofer" style="max-width:160px;">
     <option value="">Todos los choferes</option>

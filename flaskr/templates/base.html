@@ -39,6 +39,9 @@
         <a class="sidebar-link {{ 'active' if active_view == 'gruas' }}" href="{{ url_for('logistics.list_gruas') }}">
           <i data-lucide="truck" style="width:16px;height:16px"></i> Grúas
         </a>
+        <a class="sidebar-link {{ 'active' if active_view == 'sucursales' }}" href="{{ url_for('logistics.list_sucursales') }}">
+          <i data-lucide="map-pin" style="width:16px;height:16px"></i> Sucursales
+        </a>
         <a class="sidebar-link {{ 'active' if active_view == 'employees' }}" href="{{ url_for('logistics.list_employees') }}">
           <i data-lucide="user-cog" style="width:16px;height:16px"></i> Empleados
         </a>
@@ -86,8 +89,8 @@
     </header>
 
     <main class="page-content">
-      {% for message in get_flashed_messages() %}
-        <div class="flash">{{ message }}</div>
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="flash flash-{{ category or 'success' }}">{{ message }}</div>
       {% endfor %}
       {% block content %}{% endblock %}
     </main>
@@ -95,8 +98,8 @@
 </div>
 {% else %}
   <main>
-    {% for message in get_flashed_messages() %}
-      <div class="flash" style="max-width:420px; margin: 16px auto 0;">{{ message }}</div>
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="flash flash-{{ category or 'success' }}" style="max-width:420px; margin: 16px auto 0;">{{ message }}</div>
     {% endfor %}
     {% block guest_content %}{% endblock %}
   </main>

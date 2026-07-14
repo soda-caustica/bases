@@ -60,7 +60,7 @@ def login():
                 session['role'] = 'client'
                 return redirect(url_for('logistics.dashboard'))
 
-        flash(error)
+        flash(error, 'error')
     return render_template('auth/login.html')
 
 
@@ -134,13 +134,13 @@ def register():
                 session['rut'] = rut
                 session['name'] = nombre
                 session['role'] = 'client'
-                flash('Cuenta creada correctamente. ¡Bienvenido/a!')
+                flash('Cuenta creada correctamente. ¡Bienvenido/a!', 'success')
                 return redirect(url_for('logistics.dashboard'))
             except Exception:
                 db.rollback()
                 error = 'No se pudo crear la cuenta. Verifica los datos ingresados.'
 
-        flash(error)
+        flash(error, 'error')
 
     return render_template('auth/register.html', communes=communes)
 
@@ -179,7 +179,7 @@ def admin_required(view):
         if g.user is None:
             return redirect(url_for('auth.login'))
         if g.user.get('role') != 'admin':
-            flash('No tienes permiso para acceder a esta sección.')
+            flash('No tienes permiso para acceder a esta sección.', 'error')
             return redirect(url_for('logistics.dashboard'))
         return view(**kwargs)
     return wrapped_view

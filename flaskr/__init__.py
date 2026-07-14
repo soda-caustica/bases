@@ -34,6 +34,8 @@ def create_app(test_config=None):
             'logistics.list_vehicles': 'vehicles',
             'logistics.list_gruas': 'gruas',
             'logistics.list_employees': 'employees',
+            'logistics.list_sucursales': 'sucursales',
+            'logistics.sucursal_detail': 'sucursales',
         }
         return {'active_view': endpoint_map.get(request.endpoint)}
 

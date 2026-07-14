@@ -10,29 +10,6 @@
   </div>
 </div>
 
-<div class="grid-3" style="margin-bottom:20px;">
-  {% for item in vehicles_by_sucursal %}
-    <div class="card kpi-card">
-      <div class="kpi-card-top">
-        <div>
-          <span class="kpi-label">{{ item.nombre }}</span>
-          <span class="kpi-value">{{ item.cantidad_vehiculos }} <span style="font-size:14px; font-weight:normal; color:#64748b;">uds.</span></span>
-        </div>
-        <div class="kpi-icon" style="background:#3b82f6;"><i data-lucide="car" style="width:18px;height:18px"></i></div>
-      </div>
-    </div>
-  {% else %}
-    <div class="card kpi-card">
-      <div class="kpi-card-top">
-        <div>
-          <span class="kpi-label">Sucursales</span>
-          <span class="kpi-value">0 vehículos</span>
-        </div>
-        <div class="kpi-icon" style="background:#94a3b8;"><i data-lucide="car" style="width:18px;height:18px"></i></div>
-      </div>
-    </div>
-  {% endfor %}
-</div>
 
 <form method="get" class="card table-toolbar" style="margin-bottom:16px;">
   <input type="text" name="q" placeholder="Buscar por patente o cliente..." value="{{ filters.q }}" style="max-width:220px;">
@@ -45,12 +22,6 @@
     <option value="">Todos los tipos</option>
     {% for type_val in types %}
       <option value="{{ type_val }}" {{ 'selected' if filters.tipo == type_val }}>{{ type_val }}</option>
-    {% endfor %}
-  </select>
-  <select name="id_sucursal" style="max-width:180px;">
-    <option value="">Todas las sucursales</option>
-    {% for sucursal in sucursales %}
-      <option value="{{ sucursal.id_sucursal }}" {{ 'selected' if filters.id_sucursal == sucursal.id_sucursal|string }}>{{ sucursal.nombre }}</option>
     {% endfor %}
   </select>
   <select name="id_comuna" style="max-width:170px;">

@@ -431,16 +431,17 @@ def create_order():
                     flash(
                         'Orden de retiro creada correctamente. Grúa {} y chofer {} asignados.'.format(
                             assignment['patente_grua'], assignment['rut_chofer']
-                        )
+                        ),
+                        'success'
                     )
                 else:
-                    flash('Orden de retiro creada correctamente. No había grúas o choferes disponibles; asígnalos manualmente más tarde.')
+                    flash('Orden de retiro creada correctamente. No había grúas o choferes disponibles; asígnalos manualmente más tarde.', 'success')
                 return redirect(url_for('logistics.list_orders'))
             except Exception:
                 db.rollback()
                 error = 'No se pudo crear la orden. Verifica que el número de orden no exista y los datos sean válidos.'
 
-        flash(error)
+        flash(error, 'error')
 
     return render_template(
         'orders/form.html',
@@ -507,7 +508,7 @@ def update_order_status(order_id):
     new_status = request.form.get('estado', '').strip()
     valid_states = {value for value, _ in ORDER_STATES}
     if new_status not in valid_states:
-        flash('Estado no válido.')
+        flash('Estado no válido.', 'error')
         return redirect(url_for('logistics.order_detail', order_id=order_id))
 
     try:
@@ -518,10 +519,10 @@ def update_order_status(order_id):
         if new_status in ('completada', 'cancelada'):
             _release_resources_for_order(cur, order_id)
         db.commit()
-        flash('Estado de la orden actualizado.')
+        flash('Estado de la orden actualizado.', 'success')
     except Exception:
         db.rollback()
-        flash('No se pudo actualizar el estado de la orden.')
+        flash('No se pudo actualizar el estado de la orden.', 'error')
 
     return redirect(url_for('logistics.order_detail', order_id=order_id))
 
@@ -539,12 +540,12 @@ def assign_order_resources(order_id):
         assignment = _assign_resources_to_order(cur, order_id, row.id_comuna_origen)
         db.commit()
         if assignment:
-            flash('Grúa {} y chofer {} asignados a la orden.'.format(assignment['patente_grua'], assignment['rut_chofer']))
+            flash('Grúa {} y chofer {} asignados a la orden.'.format(assignment['patente_grua'], assignment['rut_chofer']), 'success')
         else:
-            flash('No hay grúas o choferes disponibles en este momento.')
+            flash('No hay grúas o choferes disponibles en este momento.', 'error')
     except Exception:
         db.rollback()
-        flash('No se pudo realizar la asignación.')
+        flash('No se pudo realizar la asignación.', 'error')
     return redirect(url_for('logistics.order_detail', order_id=order_id))
 
 
@@ -689,13 +690,13 @@ def create_receipt():
                     ),
                 )
                 db.commit()
-                flash('Factura registrada correctamente.')
+                flash('Factura registrada correctamente.', 'success')
                 return redirect(url_for('logistics.list_receipts'))
             except Exception:
                 db.rollback()
                 error = 'No se pudo registrar la factura. Verifica que el número no exista y la orden sea válida.'
 
-        flash(error)
+        flash(error, 'error')
 
     return render_template(
         'receipts/form.html',
@@ -889,12 +890,12 @@ def pay_order(order_id):
                     (next_invoice, order_record.monto_base, metodo_pago, order_id),
                 )
                 db.commit()
-                flash('Pago registrado correctamente. Se generó la factura N.º {}.'.format(next_invoice))
+                flash('Pago registrado correctamente. Se generó la factura N.º {}.'.format(next_invoice), 'success')
                 return redirect(url_for('logistics.receipt_detail', receipt_id=next_invoice))
             except Exception:
                 db.rollback()
                 error = 'No se pudo procesar el pago. Intenta nuevamente.'
-        flash(error)
+        flash(error, 'error')
 
     return render_template(
         'payments/pay.html',
@@ -972,7 +973,6 @@ def list_vehicles():
     filtro_comuna = request.args.get('id_comuna', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
     filtro_tipo = request.args.get('tipo', '').strip()
-    filtro_sucursal = request.args.get('id_sucursal', '').strip()
 
     query = """
         SELECT vr.patente, vr.tipo, vr.observacion, vr.estado,
@@ -1004,9 +1004,6 @@ def list_vehicles():
     if filtro_tipo:
         query += " AND vr.tipo = %s"
         params.append(filtro_tipo)
-    if filtro_sucursal.isdigit():
-        query += " AND v.id_sucursal_esta = %s"
-        params.append(int(filtro_sucursal))
 
     query += " ORDER BY vr.patente"
     cur.execute(query, params)
@@ -1015,35 +1012,19 @@ def list_vehicles():
     cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
     communes = cur.fetchall()
 
-    cur.execute("SELECT id_sucursal, nombre FROM public.sucursal ORDER BY nombre")
-    sucursales = cur.fetchall()
-
     cur.execute("SELECT DISTINCT tipo FROM public.vehiculoretirable WHERE tipo IS NOT NULL AND tipo <> '' ORDER BY tipo")
     types = [row.tipo for row in cur.fetchall()]
-
-    cur.execute("""
-        SELECT s.nombre, COUNT(*) AS cantidad_vehiculos
-        FROM public.vehiculoretirable vr
-        JOIN public.vehiculo v ON vr.patente = v.patente
-        JOIN public.sucursal s ON v.id_sucursal_esta = s.id_sucursal
-        GROUP BY s.nombre
-        ORDER BY s.nombre
-    """)
-    vehicles_by_sucursal = cur.fetchall()
 
     return render_template(
         'vehicles/list.html',
         vehicles=vehicles,
         communes=communes,
-        sucursales=sucursales,
         types=types,
-        vehicles_by_sucursal=vehicles_by_sucursal,
         filters={
             'estado': filtro_estado,
             'id_comuna': filtro_comuna,
             'q': filtro_busqueda,
-            'tipo': filtro_tipo,
-            'id_sucursal': filtro_sucursal
+            'tipo': filtro_tipo
         },
     )
 
@@ -1057,7 +1038,6 @@ def list_gruas():
     filtro_estado = request.args.get('estado', '').strip()
     filtro_comuna = request.args.get('id_comuna', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
-    filtro_sucursal = request.args.get('id_sucursal', '').strip()
 
     query = """
         SELECT g.patente, g.estado,
@@ -1078,9 +1058,6 @@ def list_gruas():
     if filtro_busqueda:
         query += " AND g.patente ILIKE %s"
         params.append('%{}%'.format(filtro_busqueda))
-    if filtro_sucursal.isdigit():
-        query += " AND v.id_sucursal_esta = %s"
-        params.append(int(filtro_sucursal))
 
     query += " ORDER BY g.patente"
     cur.execute(query, params)
@@ -1089,19 +1066,14 @@ def list_gruas():
     cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
     communes = cur.fetchall()
 
-    cur.execute("SELECT id_sucursal, nombre FROM public.sucursal ORDER BY nombre")
-    sucursales = cur.fetchall()
-
     return render_template(
         'gruas/list.html',
         gruas=gruas,
         communes=communes,
-        sucursales=sucursales,
         filters={
             'estado': filtro_estado,
             'id_comuna': filtro_comuna,
-            'q': filtro_busqueda,
-            'id_sucursal': filtro_sucursal
+            'q': filtro_busqueda
         },
     )
 
@@ -1152,3 +1124,64 @@ def list_employees():
         communes=communes,
         filters={'disponibilidad': filtro_disponibilidad, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
     )
+
+
+@bp.route('/sucursales')
+@admin_required
+def list_sucursales():
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("""
+        SELECT s.id_sucursal, s.nombre, s.direccion, c.nombre AS comuna,
+               (SELECT COUNT(*) FROM public.vehiculoretirable vr JOIN public.vehiculo v ON vr.patente = v.patente WHERE v.id_sucursal_esta = s.id_sucursal) AS cant_retirables,
+               (SELECT COUNT(*) FROM public.grua g JOIN public.vehiculo v ON g.patente = v.patente WHERE v.id_sucursal_esta = s.id_sucursal) AS cant_gruas
+        FROM public.sucursal s
+        JOIN public.comuna c ON s.id_comuna = c.id_comuna
+        ORDER BY s.nombre
+    """)
+    sucursales = cur.fetchall()
+    return render_template('sucursales/list.html', sucursales=sucursales)
+
+
+@bp.route('/sucursales/<int:sucursal_id>')
+@admin_required
+def sucursal_detail(sucursal_id):
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("""
+        SELECT s.id_sucursal, s.nombre, s.direccion, c.nombre AS comuna
+        FROM public.sucursal s
+        JOIN public.comuna c ON s.id_comuna = c.id_comuna
+        WHERE s.id_sucursal = %s
+    """, (sucursal_id,))
+    sucursal = cur.fetchone()
+    if sucursal is None:
+        abort(404)
+
+    # Grúas almacenadas
+    cur.execute("""
+        SELECT g.patente, g.estado
+        FROM public.grua g
+        JOIN public.vehiculo v ON g.patente = v.patente
+        WHERE v.id_sucursal_esta = %s
+        ORDER BY g.patente
+    """, (sucursal_id,))
+    gruas = cur.fetchall()
+
+    # Vehículos retirables en custodia
+    cur.execute("""
+        SELECT vr.patente, vr.tipo, vr.estado, vr.observacion
+        FROM public.vehiculoretirable vr
+        JOIN public.vehiculo v ON vr.patente = v.patente
+        WHERE v.id_sucursal_esta = %s
+        ORDER BY vr.patente
+    """, (sucursal_id,))
+    vehicles = cur.fetchall()
+
+    return render_template(
+        'sucursales/detail.html',
+        sucursal=sucursal,
+        gruas=gruas,
+        vehicles=vehicles
+    )
+

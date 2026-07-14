@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario de {{ sucursal.nombre }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+      <a href="{{ url_for('logistics.list_sucursales') }}" style="color:#64748b; text-decoration:none; font-size:13px; font-weight:500;">
+        Sucursales
+      </a>
+      <span style="color:#cbd5e1; font-size:12px;">/</span>
+      <span style="color:#0f172a; font-size:13px; font-weight:500;">{{ sucursal.nombre }}</span>
+    </div>
+    <h1 class="page-title">{{ sucursal.nombre }}</h1>
+    <p class="page-subtitle">
+      <i data-lucide="map-pin" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:4px;color:#94a3b8;"></i>
+      {{ sucursal.direccion }}, {{ sucursal.comuna }}
+    </p>
+  </div>
+</div>
+
+<div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:24px; align-items: start;">
+  <!-- Tarjeta para Grúas -->
+  <div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <i data-lucide="truck" style="color:#1d4ed8; width:18px; height:18px;"></i>
+      <h2 style="font-size:16px; font-weight:600; color:#0f172a; margin:0;">Grúas Asignadas ({{ gruas|length }})</h2>
+    </div>
+    <div class="card table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Patente</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for g in gruas %}
+            <tr>
+              <td><span class="mono text-strong">{{ g.patente }}</span></td>
+              <td>
+                <span class="badge {{ 'badge-available' if g.estado == 'disponible' else ('badge-en_proceso' if g.estado == 'en_transito' else 'badge-inactive-danger') }}">
+                  {{ g.estado.replace('_', ' ') }}
+                </span>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="2" class="text-muted" style="padding:16px; text-align:center;">No hay grúas asignadas a esta sucursal.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tarjeta para Vehículos Retirados -->
+  <div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <i data-lucide="car" style="color:#166534; width:18px; height:18px;"></i>
+      <h2 style="font-size:16px; font-weight:600; color:#0f172a; margin:0;">Vehículos en Custodia ({{ vehicles|length }})</h2>
+    </div>
+    <div class="card table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Patente</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Observación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vehicles %}
+            <tr>
+              <td><span class="mono text-strong">{{ v.patente }}</span></td>
+              <td class="text-muted" style="font-size:12px;">{{ v.tipo or '-' }}</td>
+              <td>
+                <span class="badge {{ 'badge-completada' if v.estado == 'en_sucursal' else 'badge-en_proceso' }}">
+                  {{ v.estado.replace('_', ' ') }}
+                </span>
+              </td>
+              <td style="font-size:12px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ v.observacion or '' }}">
+                {{ v.observacion or '-' }}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="4" class="text-muted" style="padding:16px; text-align:center;">No hay vehículos retirados almacenados en esta sucursal.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
