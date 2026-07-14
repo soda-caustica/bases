@@ -15,8 +15,40 @@
   {% endif %}
 </div>
 
+<div class="grid-4" style="margin-bottom:20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+  {% for item in payments_by_method %}
+    <div class="card kpi-card">
+      <div class="kpi-card-top">
+        <div>
+          <span class="kpi-label" style="text-transform: capitalize;">{{ item.metodo_de_pago }}</span>
+          <span class="kpi-value">${{ '{:,.0f}'.format(item.total) }}</span>
+        </div>
+        <div class="kpi-icon" style="background:#10b981;"><i data-lucide="credit-card" style="width:18px;height:18px"></i></div>
+      </div>
+    </div>
+  {% else %}
+    <div class="card kpi-card">
+      <div class="kpi-card-top">
+        <div>
+          <span class="kpi-label">Facturado</span>
+          <span class="kpi-value">$0</span>
+        </div>
+        <div class="kpi-icon" style="background:#94a3b8;"><i data-lucide="credit-card" style="width:18px;height:18px"></i></div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
 <form method="get" class="card table-toolbar" style="margin-bottom:16px;">
   <input type="text" name="q" placeholder="Buscar por cliente o RUT..." value="{{ filters.q }}" style="max-width:220px;">
+  {% if is_admin %}
+  <select name="rut_empresa" style="max-width:180px;">
+    <option value="">Todas las empresas</option>
+    {% for company in companies %}
+      <option value="{{ company.rut }}" {{ 'selected' if filters.rut_empresa == company.rut }}>{{ company.razon_social }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
   <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#64748b; margin:0;">Desde
     <input type="date" name="desde" value="{{ filters.desde }}" style="width:150px;">
   </label>

@@ -278,6 +278,9 @@ def list_orders():
     filtro_desde = request.args.get('desde', '').strip()
     filtro_hasta = request.args.get('hasta', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
+    filtro_con_retiro = request.args.get('con_retiro', '').strip()
+    filtro_chofer = request.args.get('rut_chofer', '').strip()
+    filtro_grua = request.args.get('patente_grua', '').strip()
 
     query = """
         SELECT o.numero_de_orden,
@@ -314,16 +317,51 @@ def list_orders():
         query += " AND (o.rut_cliente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
         like = '%{}%'.format(filtro_busqueda)
         params.extend([like, like, like])
+    if filtro_con_retiro == 'con_retiro':
+        query += " AND EXISTS (SELECT 1 FROM public.retiro r WHERE r.numero_de_orden = o.numero_de_orden)"
+    elif filtro_con_retiro == 'sin_retiro':
+        query += " AND NOT EXISTS (SELECT 1 FROM public.retiro r WHERE r.numero_de_orden = o.numero_de_orden)"
+    if filtro_chofer:
+        query += " AND EXISTS (SELECT 1 FROM public.retiro r WHERE r.numero_de_orden = o.numero_de_orden AND r.rut_chofer = %s)"
+        params.append(filtro_chofer)
+    if filtro_grua:
+        query += " AND EXISTS (SELECT 1 FROM public.retiro r JOIN public.grua_retiro gr ON gr.id_retiro = r.id_retiro WHERE r.numero_de_orden = o.numero_de_orden AND gr.patente_grua = %s)"
+        params.append(filtro_grua)
 
     query += " ORDER BY o.fecha DESC, o.numero_de_orden DESC"
     cur.execute(query, params)
     orders = cur.fetchall()
+
+    drivers = []
+    gruas = []
+    if _is_admin():
+        cur.execute("""
+            SELECT ch.rut, p.nombre
+            FROM public.chofer ch
+            JOIN public.persona p ON p.rut = ch.rut
+            ORDER BY p.nombre
+        """)
+        drivers = cur.fetchall()
+        cur.execute("SELECT patente FROM public.grua ORDER BY patente")
+        gruas = cur.fetchall()
+
     return render_template(
         'orders/list.html',
         orders=orders,
         states=ORDER_STATES,
-        filters={'estado': filtro_estado, 'desde': filtro_desde, 'hasta': filtro_hasta, 'q': filtro_busqueda},
+        drivers=drivers,
+        gruas=gruas,
+        filters={
+            'estado': filtro_estado,
+            'desde': filtro_desde,
+            'hasta': filtro_hasta,
+            'q': filtro_busqueda,
+            'con_retiro': filtro_con_retiro,
+            'rut_chofer': filtro_chofer,
+            'patente_grua': filtro_grua
+        },
     )
+
 
 
 @bp.route('/orders/create', methods=('GET', 'POST'))
@@ -519,6 +557,7 @@ def list_receipts():
     filtro_desde = request.args.get('desde', '').strip()
     filtro_hasta = request.args.get('hasta', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
+    filtro_empresa = request.args.get('rut_empresa', '').strip()
 
     query = """
         SELECT f.numero_de_factura,
@@ -549,15 +588,49 @@ def list_receipts():
         query += " AND (o.rut_cliente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
         like = '%{}%'.format(filtro_busqueda)
         params.extend([like, like, like])
+    if filtro_empresa:
+        query += " AND e.rut = %s"
+        params.append(filtro_empresa)
 
     query += " ORDER BY f.fecha DESC, f.numero_de_factura DESC"
     cur.execute(query, params)
     receipts = cur.fetchall()
+
+    companies = []
+    if _is_admin():
+        cur.execute("SELECT rut, razon_social FROM public.empresa ORDER BY razon_social")
+        companies = cur.fetchall()
+
+    if _is_admin():
+        cur.execute("""
+            SELECT metodo_de_pago, SUM(monto_total) AS total
+            FROM public.factura
+            GROUP BY metodo_de_pago
+            ORDER BY total DESC
+        """)
+    else:
+        cur.execute("""
+            SELECT f.metodo_de_pago, SUM(f.monto_total) AS total
+            FROM public.factura f
+            JOIN public.ordenderetiro o ON o.numero_de_orden = f.numero_de_orden
+            WHERE o.rut_cliente = %s
+            GROUP BY f.metodo_de_pago
+            ORDER BY total DESC
+        """, (g.user['rut'],))
+    payments_by_method = cur.fetchall()
+
     return render_template(
         'receipts/list.html',
         receipts=receipts,
         is_admin=_is_admin(),
-        filters={'desde': filtro_desde, 'hasta': filtro_hasta, 'q': filtro_busqueda},
+        companies=companies,
+        payments_by_method=payments_by_method,
+        filters={
+            'desde': filtro_desde,
+            'hasta': filtro_hasta,
+            'q': filtro_busqueda,
+            'rut_empresa': filtro_empresa
+        },
     )
 
 
@@ -671,6 +744,7 @@ def list_payments():
     filtro_desde = request.args.get('desde', '').strip()
     filtro_hasta = request.args.get('hasta', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
+    filtro_empresa = request.args.get('rut_empresa', '').strip()
 
     base_query = """
         SELECT o.numero_de_orden, o.fecha, o.monto_base, o.estado,
@@ -701,33 +775,74 @@ def list_payments():
         base_query += " AND (o.rut_cliente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
         like = '%{}%'.format(filtro_busqueda)
         params.extend([like, like, like])
+    if filtro_empresa:
+        base_query += " AND e.rut = %s"
+        params.append(filtro_empresa)
 
     base_query += " ORDER BY o.fecha DESC, o.numero_de_orden DESC"
     cur.execute(base_query, params)
     rows = cur.fetchall()
 
-    # Calcular totales globales (independientes de los filtros de fecha, estado y búsqueda)
+    # Calcular totales globales (independientes de los filtros de fecha, estado y búsqueda, pero respetando empresa)
     tot_query = """
         SELECT o.monto_base, f.numero_de_factura
         FROM public.ordenderetiro o
         LEFT JOIN public.factura f ON f.numero_de_orden = o.numero_de_orden
+        JOIN public.cliente c ON c.rut = o.rut_cliente
+        LEFT JOIN public.empresa e ON e.rut = c.rut
+        WHERE 1 = 1
     """
     tot_params = []
     if not _is_admin():
-        tot_query += " WHERE o.rut_cliente = %s"
+        tot_query += " AND o.rut_cliente = %s"
         tot_params.append(g.user['rut'])
+    if filtro_empresa:
+        tot_query += " AND e.rut = %s"
+        tot_params.append(filtro_empresa)
+
     cur.execute(tot_query, tot_params)
     all_rows = cur.fetchall()
 
     pending_total = sum(float(r.monto_base) for r in all_rows if r.numero_de_factura is None)
     paid_total = sum(float(r.monto_base) for r in all_rows if r.numero_de_factura is not None)
 
+    companies = []
+    if _is_admin():
+        cur.execute("SELECT rut, razon_social FROM public.empresa ORDER BY razon_social")
+        companies = cur.fetchall()
+
+    if _is_admin():
+        cur.execute("""
+            SELECT metodo_de_pago, SUM(monto_total) AS total
+            FROM public.factura
+            GROUP BY metodo_de_pago
+            ORDER BY total DESC
+        """)
+    else:
+        cur.execute("""
+            SELECT f.metodo_de_pago, SUM(f.monto_total) AS total
+            FROM public.factura f
+            JOIN public.ordenderetiro o ON o.numero_de_orden = f.numero_de_orden
+            WHERE o.rut_cliente = %s
+            GROUP BY f.metodo_de_pago
+            ORDER BY total DESC
+        """, (g.user['rut'],))
+    payments_by_method = cur.fetchall()
+
     return render_template(
         'payments/list.html',
         rows=rows,
         pending_total=pending_total,
         paid_total=paid_total,
-        filters={'estado_pago': filtro_estado_pago, 'desde': filtro_desde, 'hasta': filtro_hasta, 'q': filtro_busqueda},
+        companies=companies,
+        payments_by_method=payments_by_method,
+        filters={
+            'estado_pago': filtro_estado_pago,
+            'desde': filtro_desde,
+            'hasta': filtro_hasta,
+            'q': filtro_busqueda,
+            'rut_empresa': filtro_empresa
+        },
     )
 
 
@@ -807,7 +922,10 @@ def list_clients():
                c.direccion_residencia,
                com.nombre AS comuna,
                c.id_comuna,
-               CASE WHEN e.rut IS NULL THEN 'Persona' ELSE 'Empresa' END AS tipo
+               CASE
+                   WHEN p.rut IS NOT NULL THEN 'Persona'
+                   WHEN e.rut IS NOT NULL THEN 'Empresa'
+               END AS tipo
         FROM public.cliente c
         LEFT JOIN public.persona p ON p.rut = c.rut
         LEFT JOIN public.empresa e ON e.rut = c.rut
@@ -853,6 +971,8 @@ def list_vehicles():
     filtro_estado = request.args.get('estado', '').strip()
     filtro_comuna = request.args.get('id_comuna', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
+    filtro_tipo = request.args.get('tipo', '').strip()
+    filtro_sucursal = request.args.get('id_sucursal', '').strip()
 
     query = """
         SELECT vr.patente, vr.tipo, vr.observacion, vr.estado,
@@ -863,12 +983,12 @@ def list_vehicles():
         JOIN public.vehiculo v ON v.patente = vr.patente
         LEFT JOIN public.sucursal s ON s.id_sucursal = v.id_sucursal_esta
         LEFT JOIN public.comuna com ON com.id_comuna = s.id_comuna
-        JOIN public.vehiculoretirable_orden vro ON vro.patente_vehiculo = vr.patente
-        JOIN public.ordenderetiro o ON o.numero_de_orden = vro.numero_de_orden
-        JOIN public.cliente cl ON cl.rut = o.rut_cliente
+        LEFT JOIN public.vehiculoretirable_orden vro ON vro.patente_vehiculo = vr.patente
+        LEFT JOIN public.ordenderetiro o ON o.numero_de_orden = vro.numero_de_orden
+        LEFT JOIN public.cliente cl ON cl.rut = o.rut_cliente
         LEFT JOIN public.persona p ON p.rut = cl.rut
         LEFT JOIN public.empresa e ON e.rut = cl.rut
-        WHERE o.estado = 'completada'
+        WHERE 1 = 1
     """
     params = []
     if filtro_estado:
@@ -881,6 +1001,12 @@ def list_vehicles():
         query += " AND (vr.patente ILIKE %s OR p.nombre ILIKE %s OR e.razon_social ILIKE %s)"
         like = '%{}%'.format(filtro_busqueda)
         params.extend([like, like, like])
+    if filtro_tipo:
+        query += " AND vr.tipo = %s"
+        params.append(filtro_tipo)
+    if filtro_sucursal.isdigit():
+        query += " AND v.id_sucursal_esta = %s"
+        params.append(int(filtro_sucursal))
 
     query += " ORDER BY vr.patente"
     cur.execute(query, params)
@@ -889,11 +1015,36 @@ def list_vehicles():
     cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
     communes = cur.fetchall()
 
+    cur.execute("SELECT id_sucursal, nombre FROM public.sucursal ORDER BY nombre")
+    sucursales = cur.fetchall()
+
+    cur.execute("SELECT DISTINCT tipo FROM public.vehiculoretirable WHERE tipo IS NOT NULL AND tipo <> '' ORDER BY tipo")
+    types = [row.tipo for row in cur.fetchall()]
+
+    cur.execute("""
+        SELECT s.nombre, COUNT(*) AS cantidad_vehiculos
+        FROM public.vehiculoretirable vr
+        JOIN public.vehiculo v ON vr.patente = v.patente
+        JOIN public.sucursal s ON v.id_sucursal_esta = s.id_sucursal
+        GROUP BY s.nombre
+        ORDER BY s.nombre
+    """)
+    vehicles_by_sucursal = cur.fetchall()
+
     return render_template(
         'vehicles/list.html',
         vehicles=vehicles,
         communes=communes,
-        filters={'estado': filtro_estado, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
+        sucursales=sucursales,
+        types=types,
+        vehicles_by_sucursal=vehicles_by_sucursal,
+        filters={
+            'estado': filtro_estado,
+            'id_comuna': filtro_comuna,
+            'q': filtro_busqueda,
+            'tipo': filtro_tipo,
+            'id_sucursal': filtro_sucursal
+        },
     )
 
 
@@ -906,6 +1057,7 @@ def list_gruas():
     filtro_estado = request.args.get('estado', '').strip()
     filtro_comuna = request.args.get('id_comuna', '').strip()
     filtro_busqueda = request.args.get('q', '').strip()
+    filtro_sucursal = request.args.get('id_sucursal', '').strip()
 
     query = """
         SELECT g.patente, g.estado,
@@ -926,6 +1078,9 @@ def list_gruas():
     if filtro_busqueda:
         query += " AND g.patente ILIKE %s"
         params.append('%{}%'.format(filtro_busqueda))
+    if filtro_sucursal.isdigit():
+        query += " AND v.id_sucursal_esta = %s"
+        params.append(int(filtro_sucursal))
 
     query += " ORDER BY g.patente"
     cur.execute(query, params)
@@ -934,11 +1089,20 @@ def list_gruas():
     cur.execute("SELECT id_comuna, nombre FROM public.comuna ORDER BY nombre")
     communes = cur.fetchall()
 
+    cur.execute("SELECT id_sucursal, nombre FROM public.sucursal ORDER BY nombre")
+    sucursales = cur.fetchall()
+
     return render_template(
         'gruas/list.html',
         gruas=gruas,
         communes=communes,
-        filters={'estado': filtro_estado, 'id_comuna': filtro_comuna, 'q': filtro_busqueda},
+        sucursales=sucursales,
+        filters={
+            'estado': filtro_estado,
+            'id_comuna': filtro_comuna,
+            'q': filtro_busqueda,
+            'id_sucursal': filtro_sucursal
+        },
     )
 
 

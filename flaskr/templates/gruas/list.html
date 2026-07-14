@@ -18,6 +18,12 @@
     <option value="en_transito" {{ 'selected' if filters.estado == 'en_transito' }}>En tránsito</option>
     <option value="mantenimiento" {{ 'selected' if filters.estado == 'mantenimiento' }}>Mantenimiento</option>
   </select>
+  <select name="id_sucursal" style="max-width:180px;">
+    <option value="">Todas las sucursales</option>
+    {% for sucursal in sucursales %}
+      <option value="{{ sucursal.id_sucursal }}" {{ 'selected' if filters.id_sucursal == sucursal.id_sucursal|string }}>{{ sucursal.nombre }}</option>
+    {% endfor %}
+  </select>
   <select name="id_comuna" style="max-width:170px;">
     <option value="">Todas las comunas</option>
     {% for comuna in communes %}
