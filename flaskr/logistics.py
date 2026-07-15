@@ -394,6 +394,11 @@ def create_order():
         id_comuna_origen = request.form.get('id_comuna_origen', '').strip()
         id_comuna_destino = request.form.get('id_comuna_destino', '').strip()
 
+        # Datos del vehículo
+        vehiculo_patente = request.form.get('vehiculo_patente', '').strip().upper()
+        vehiculo_tipo = request.form.get('vehiculo_tipo', '').strip()
+        vehiculo_observacion = request.form.get('vehiculo_observacion', '').strip()
+
         if not fecha:
             error = 'Fecha de la orden es obligatoria.'
         elif not monto:
@@ -406,9 +411,14 @@ def create_order():
             error = 'Dirección de origen y destino son obligatorias.'
         elif not id_comuna_origen.isdigit() or not id_comuna_destino.isdigit():
             error = 'Comunas de origen y destino deben seleccionarse correctamente.'
+        elif not vehiculo_patente:
+            error = 'La patente del vehículo a retirar es obligatoria.'
+        elif not vehiculo_tipo:
+            error = 'El tipo de vehículo a retirar es obligatorio.'
 
         if error is None:
             try:
+                # 1. Insertar orden de retiro
                 cur.execute(
                     """
                     INSERT INTO public.ordenderetiro
@@ -424,17 +434,42 @@ def create_order():
                     ),
                 )
                 new_order_id = cur.fetchone()[0]
+
+                # 2. Insertar / Actualizar vehículo
+                cur.execute("SELECT patente FROM public.vehiculo WHERE patente = %s", (vehiculo_patente,))
+                veh_exists = cur.fetchone() is not None
+                if not veh_exists:
+                    cur.execute("INSERT INTO public.vehiculo (patente, id_sucursal_esta) VALUES (%s, NULL)", (vehiculo_patente,))
+                    cur.execute(
+                        "INSERT INTO public.vehiculoretirable (patente, observacion, tipo, estado) VALUES (%s, %s, %s, 'en_traslado')",
+                        (vehiculo_patente, vehiculo_observacion, vehiculo_tipo)
+                    )
+                else:
+                    # Si ya existía, actualizamos sus datos para este nuevo traslado
+                    cur.execute(
+                        "UPDATE public.vehiculoretirable SET observacion = %s, tipo = %s, estado = 'en_traslado' WHERE patente = %s",
+                        (vehiculo_observacion, vehiculo_tipo, vehiculo_patente)
+                    )
+
+                # 3. Vincular vehículo a orden
+                cur.execute(
+                    "INSERT INTO public.vehiculoretirable_orden (patente_vehiculo, numero_de_orden) VALUES (%s, %s)",
+                    (vehiculo_patente, new_order_id)
+                )
+
+                # 4. Asignar chofer y grúa si están disponibles
                 assignment = _assign_resources_to_order(cur, new_order_id, int(id_comuna_origen))
                 db.commit()
+
                 if assignment:
                     flash(
-                        'Orden de retiro creada correctamente. Grúa {} y chofer {} asignados.'.format(
-                            assignment['patente_grua'], assignment['rut_chofer']
+                        'Orden de retiro creada correctamente. Vehículo {} registrado. Grúa {} y chofer {} asignados.'.format(
+                            vehiculo_patente, assignment['patente_grua'], assignment['rut_chofer']
                         ),
                         'success'
                     )
                 else:
-                    flash('Orden de retiro creada correctamente. No había grúas o choferes disponibles; asígnalos manualmente más tarde.', 'success')
+                    flash('Orden de retiro creada correctamente. Vehículo {} registrado. No había grúas o choferes disponibles; asígnalos manualmente más tarde.'.format(vehiculo_patente), 'success')
                 return redirect(url_for('logistics.list_orders'))
             except Exception:
                 db.rollback()
