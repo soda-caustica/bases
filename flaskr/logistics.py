@@ -128,7 +128,7 @@ def _find_available_grua(cur, id_comuna_origen):
 def _find_available_chofer(cur):
     """No existe información de sucursal para choferes en el esquema actual,
     así que se asigna cualquiera disponible."""
-    cur.execute("SELECT rut FROM public.chofer WHERE disponibilidad = true LIMIT 1")
+    cur.execute("SELECT rut FROM public.chofer WHERE disponibilidad = true ORDER BY rut DESC LIMIT 1")
     row = cur.fetchone()
     return row.rut if row else None
 
@@ -180,6 +180,51 @@ def _release_resources_for_order(cur, numero_de_orden):
             (row.patente_grua,),
         )
         cur.execute("UPDATE public.chofer SET disponibilidad = true WHERE rut = %s", (row.rut_chofer,))
+
+        # Restablecer la sucursal de la grúa liberada
+        cur.execute(
+            "SELECT id_comuna_origen, id_comuna_destino FROM public.ordenderetiro WHERE numero_de_orden = %s",
+            (numero_de_orden,)
+        )
+        order_row = cur.fetchone()
+        id_sucursal = None
+        if order_row:
+            # 1. Intentar sucursal en comuna de destino
+            cur.execute("SELECT id_sucursal FROM public.sucursal WHERE id_comuna = %s LIMIT 1", (order_row.id_comuna_destino,))
+            branch_row = cur.fetchone()
+            if branch_row:
+                id_sucursal = branch_row.id_sucursal
+            else:
+                # 2. Intentar sucursal en comuna de origen
+                cur.execute("SELECT id_sucursal FROM public.sucursal WHERE id_comuna = %s LIMIT 1", (order_row.id_comuna_origen,))
+                branch_row = cur.fetchone()
+                if branch_row:
+                    id_sucursal = branch_row.id_sucursal
+                else:
+                    # 3. Intentar sucursal en la región de la comuna de destino
+                    cur.execute(
+                        """
+                        SELECT s.id_sucursal FROM public.sucursal s
+                        JOIN public.comuna com ON com.id_comuna = s.id_comuna
+                        WHERE com.id_region = (SELECT id_region FROM public.comuna WHERE id_comuna = %s)
+                        LIMIT 1
+                        """,
+                        (order_row.id_comuna_destino,)
+                    )
+                    branch_row = cur.fetchone()
+                    if branch_row:
+                        id_sucursal = branch_row.id_sucursal
+                    else:
+                        # 4. Cualquier sucursal como fallback
+                        cur.execute("SELECT id_sucursal FROM public.sucursal LIMIT 1")
+                        branch_row = cur.fetchone()
+                        if branch_row:
+                            id_sucursal = branch_row.id_sucursal
+        if id_sucursal is not None:
+            cur.execute(
+                "UPDATE public.vehiculo SET id_sucursal_esta = %s WHERE patente = %s",
+                (id_sucursal, row.patente_grua)
+            )
 
 
 def _fetch_order_dispatch(cur, numero_de_orden):
@@ -390,7 +435,7 @@ def create_order():
     error = None
     if request.method == 'POST':
         fecha = request.form.get('fecha', '').strip()
-        monto = request.form.get('monto_base', '').strip()
+        monto = request.form.get('monto_base', '').strip() if _is_admin() else '0.00'
         estado = request.form.get('estado', 'pendiente').strip()
         rut_cliente = request.form.get('rut_cliente', '').strip() if _is_admin() else g.user['rut']
         direccion_origen = request.form.get('direccion_origen', '').strip()
@@ -445,13 +490,13 @@ def create_order():
                 if not veh_exists:
                     cur.execute("INSERT INTO public.vehiculo (patente, id_sucursal_esta) VALUES (%s, NULL)", (vehiculo_patente,))
                     cur.execute(
-                        "INSERT INTO public.vehiculoretirable (patente, observacion, tipo, estado) VALUES (%s, %s, %s, 'en_traslado')",
+                        "INSERT INTO public.vehiculoretirable (patente, observacion, tipo, estado) VALUES (%s, %s, %s, 'en_sucursal')",
                         (vehiculo_patente, vehiculo_observacion, vehiculo_tipo)
                     )
                 else:
-                    # Si ya existía, actualizamos sus datos para este nuevo traslado
+                    # Si ya existía, actualizamos sus datos para este nuevo traslado (sin forzar estado en_traslado en Python)
                     cur.execute(
-                        "UPDATE public.vehiculoretirable SET observacion = %s, tipo = %s, estado = 'en_traslado' WHERE patente = %s",
+                        "UPDATE public.vehiculoretirable SET observacion = %s, tipo = %s WHERE patente = %s",
                         (vehiculo_observacion, vehiculo_tipo, vehiculo_patente)
                     )
 
@@ -571,6 +616,30 @@ def update_order_status(order_id):
     except Exception:
         db.rollback()
         flash('No se pudo actualizar el estado de la orden.', 'error')
+
+    return redirect(url_for('logistics.order_detail', order_id=order_id))
+
+
+@bp.route('/orders/<int:order_id>/cost', methods=('POST',))
+@admin_required
+def update_order_cost(order_id):
+    db = get_db()
+    cur = db.cursor()
+    monto = request.form.get('monto_base', '').strip()
+    if not monto:
+        flash('El monto base es obligatorio.', 'error')
+        return redirect(url_for('logistics.order_detail', order_id=order_id))
+
+    try:
+        cur.execute(
+            "UPDATE public.ordenderetiro SET monto_base = %s WHERE numero_de_orden = %s",
+            (monto, order_id),
+        )
+        db.commit()
+        flash('Costo de la orden actualizado correctamente.', 'success')
+    except Exception:
+        db.rollback()
+        flash('No se pudo actualizar el costo de la orden.', 'error')
 
     return redirect(url_for('logistics.order_detail', order_id=order_id))
 
@@ -699,7 +768,7 @@ def create_receipt():
         LEFT JOIN public.empresa e ON e.rut = c.rut
         WHERE NOT EXISTS (
             SELECT 1 FROM public.factura f WHERE f.numero_de_orden = o.numero_de_orden
-        )
+        ) AND o.monto_base > 0
         ORDER BY o.fecha DESC
         """
     )
@@ -1147,6 +1216,17 @@ def update_grua_status(patente):
             "UPDATE public.grua SET estado = %s WHERE patente = %s",
             (new_status, patente)
         )
+        if new_status == 'disponible':
+            cur.execute("SELECT id_sucursal_esta FROM public.vehiculo WHERE patente = %s", (patente,))
+            veh_row = cur.fetchone()
+            if veh_row and veh_row.id_sucursal_esta is None:
+                cur.execute("SELECT id_sucursal FROM public.sucursal LIMIT 1")
+                branch_row = cur.fetchone()
+                if branch_row:
+                    cur.execute(
+                        "UPDATE public.vehiculo SET id_sucursal_esta = %s WHERE patente = %s",
+                        (branch_row.id_sucursal, patente)
+                    )
         db.commit()
         flash(f'Estado de la grúa {patente} actualizado a {new_status}.', 'success')
     except Exception:

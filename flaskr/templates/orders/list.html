@@ -72,14 +72,20 @@
           <td class="text-muted" style="font-size:12px;">{{ order.fecha }}</td>
           {% if g.user.role == 'admin' %}<td class="text-strong">{{ order.cliente_nombre }}</td>{% endif %}
           <td><span class="badge badge-{{ order.estado }}">{{ order.estado.replace('_', ' ') }}</span></td>
-          <td class="text-strong">${{ '{:,.0f}'.format(order.monto_base) }}</td>
+          <td class="text-strong">
+            {% if order.monto_base == 0 %}
+              <span class="badge badge-pendiente">Pendiente</span>
+            {% else %}
+              ${{ '{:,.0f}'.format(order.monto_base) }}
+            {% endif %}
+          </td>
           <td>{% if order.tiene_factura %}<span class="badge badge-completada">Sí</span>{% else %}<span class="badge">No</span>{% endif %}</td>
           <td>
             <div style="display:flex; gap:6px;">
               <a href="{{ url_for('logistics.order_detail', order_id=order.numero_de_orden) }}" class="btn btn-ghost btn-sm">
                 <i data-lucide="eye" style="width:13px;height:13px"></i> Ver
               </a>
-              {% if not order.tiene_factura %}
+              {% if not order.tiene_factura and order.monto_base > 0 %}
               <a href="{{ url_for('logistics.pay_order', order_id=order.numero_de_orden) }}" class="btn btn-ghost btn-sm">
                 <i data-lucide="credit-card" style="width:13px;height:13px"></i> Pagar
               </a>

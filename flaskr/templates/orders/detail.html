@@ -19,7 +19,16 @@
     <div><label>Teléfono</label><p>{{ order.cliente_fono or '-' }}</p></div>
     <div class="full-width"><label>Origen</label><p>{{ order.direccion_origen }}{% if order.comuna_origen_nombre %} (Comuna: {{ order.comuna_origen_nombre }}){% endif %}</p></div>
     <div class="full-width"><label>Destino</label><p>{{ order.direccion_destino }}{% if order.comuna_destino_nombre %} (Comuna: {{ order.comuna_destino_nombre }}){% endif %}</p></div>
-    <div><label>Monto base</label><p class="text-strong">${{ '{:,.0f}'.format(order.monto_base) }}</p></div>
+    <div>
+      <label>Monto base</label>
+      <p class="text-strong">
+        {% if order.monto_base == 0 %}
+          <span class="badge badge-pendiente">Pendiente de asignar</span>
+        {% else %}
+          ${{ '{:,.0f}'.format(order.monto_base) }}
+        {% endif %}
+      </p>
+    </div>
     <div><label>Factura registrada</label><p>{{ 'Sí' if receipt else 'No' }}</p></div>
   </div>
 </div>
@@ -75,6 +84,15 @@
   </form>
   <p style="font-size:12px; color:#94a3b8; margin:10px 0 0;">Al marcar la orden como "Completada" o "Cancelada" se libera automáticamente la grúa y el chofer asignados.</p>
 </div>
+
+<div class="card panel" style="margin-bottom:16px;">
+  <h3>Asignar / Actualizar Costo (Monto Base)</h3>
+  <form method="post" action="{{ url_for('logistics.update_order_cost', order_id=order.numero_de_orden) }}" style="display:flex; gap:10px; align-items:center;">
+    <input type="number" name="monto_base" step="0.01" min="0" value="{{ order.monto_base if order.monto_base > 0 else '' }}" placeholder="Ej: 45000" required style="max-width:200px; padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+    <button type="submit" class="btn btn-primary btn-sm">Guardar costo</button>
+  </form>
+  <p style="font-size:12px; color:#94a3b8; margin:10px 0 0;">Ingresa el costo base del retiro en pesos chilenos (CLP).</p>
+</div>
 {% endif %}
 
 {% if receipt %}
@@ -91,10 +109,14 @@
 {% else %}
   <div class="card panel" style="margin-bottom:16px;">
     <h3>Pago Pendiente</h3>
-    <p style="font-size:13px; color:#64748b; margin:0 0 12px;">Esta orden aún no tiene una factura/pago asociado.</p>
-    <a href="{{ url_for('logistics.pay_order', order_id=order.numero_de_orden) }}" class="btn btn-primary">
-      <i data-lucide="credit-card" style="width:14px;height:14px"></i> Ir a pagar
-    </a>
+    {% if order.monto_base > 0 %}
+      <p style="font-size:13px; color:#64748b; margin:0 0 12px;">Esta orden aún no tiene una factura/pago asociado.</p>
+      <a href="{{ url_for('logistics.pay_order', order_id=order.numero_de_orden) }}" class="btn btn-primary">
+        <i data-lucide="credit-card" style="width:14px;height:14px"></i> Ir a pagar
+      </a>
+    {% else %}
+      <p style="font-size:13px; color:#64748b; margin:0;">El costo de esta orden aún no ha sido asignado por el administrador. Podrás realizar el pago una vez que se asigne el costo.</p>
+    {% endif %}
   </div>
 {% endif %}
 

@@ -100,7 +100,13 @@
         <tr>
           <td><span class="mono">#{{ r.numero_de_orden }}</span></td>
           {% if g.user.role == 'admin' %}<td class="text-strong">{{ r.cliente_nombre }}</td>{% endif %}
-          <td class="text-strong">${{ '{:,.0f}'.format(r.monto_base) }}</td>
+          <td class="text-strong">
+            {% if r.monto_base == 0 %}
+              <span class="badge badge-pendiente">Pendiente</span>
+            {% else %}
+              ${{ '{:,.0f}'.format(r.monto_base) }}
+            {% endif %}
+          </td>
           <td class="text-muted" style="font-size:12.5px;">{{ r.metodo_de_pago or '—' }}</td>
           <td>
             {% if r.numero_de_factura %}
@@ -116,7 +122,11 @@
                 <i data-lucide="eye" style="width:13px;height:13px"></i> Ver factura
               </a>
             {% else %}
-              <a href="{{ url_for('logistics.pay_order', order_id=r.numero_de_orden) }}" class="btn btn-primary btn-sm">Pagar Ahora</a>
+              {% if r.monto_base > 0 %}
+                <a href="{{ url_for('logistics.pay_order', order_id=r.numero_de_orden) }}" class="btn btn-primary btn-sm">Pagar Ahora</a>
+              {% else %}
+                <span class="badge badge-pendiente">Costo pendiente</span>
+              {% endif %}
             {% endif %}
           </td>
         </tr>
