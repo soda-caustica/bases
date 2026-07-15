@@ -385,19 +385,16 @@ def create_order():
 
     error = None
     if request.method == 'POST':
-        numero = request.form.get('numero_de_orden', '').strip()
         fecha = request.form.get('fecha', '').strip()
         monto = request.form.get('monto_base', '').strip()
-        estado = request.form.get('estado', '').strip()
+        estado = request.form.get('estado', 'pendiente').strip()
         rut_cliente = request.form.get('rut_cliente', '').strip() if _is_admin() else g.user['rut']
         direccion_origen = request.form.get('direccion_origen', '').strip()
         direccion_destino = request.form.get('direccion_destino', '').strip()
         id_comuna_origen = request.form.get('id_comuna_origen', '').strip()
         id_comuna_destino = request.form.get('id_comuna_destino', '').strip()
 
-        if not numero.isdigit():
-            error = 'Número de orden válido es obligatorio.'
-        elif not fecha:
+        if not fecha:
             error = 'Fecha de la orden es obligatoria.'
         elif not monto:
             error = 'Monto base de la orden es obligatorio.'
@@ -415,17 +412,19 @@ def create_order():
                 cur.execute(
                     """
                     INSERT INTO public.ordenderetiro
-                        (numero_de_orden, fecha, monto_base, estado, rut_cliente,
+                        (fecha, monto_base, estado, rut_cliente,
                          direccion_origen, direccion_destino, id_comuna_origen, id_comuna_destino)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING numero_de_orden
                     """,
                     (
-                        int(numero), fecha, monto, estado, rut_cliente,
+                        fecha, monto, estado, rut_cliente,
                         direccion_origen, direccion_destino,
                         int(id_comuna_origen), int(id_comuna_destino),
                     ),
                 )
-                assignment = _assign_resources_to_order(cur, int(numero), int(id_comuna_origen))
+                new_order_id = cur.fetchone()[0]
+                assignment = _assign_resources_to_order(cur, new_order_id, int(id_comuna_origen))
                 db.commit()
                 if assignment:
                     flash(
@@ -439,7 +438,7 @@ def create_order():
                 return redirect(url_for('logistics.list_orders'))
             except Exception:
                 db.rollback()
-                error = 'No se pudo crear la orden. Verifica que el número de orden no exista y los datos sean válidos.'
+                error = 'No se pudo crear la orden. Verifica que los datos sean válidos.'
 
         flash(error, 'error')
 
@@ -658,16 +657,13 @@ def create_receipt():
     pending_orders = cur.fetchall()
 
     if request.method == 'POST':
-        numero_factura = request.form.get('numero_de_factura', '').strip()
         fecha = request.form.get('fecha', '').strip()
         monto_total = request.form.get('monto_total', '').strip()
         metodo_pago = request.form.get('metodo_de_pago', '').strip()
         numero_de_orden = request.form.get('numero_de_orden', '').strip()
 
         error = None
-        if not numero_factura.isdigit():
-            error = 'Número de factura válido es obligatorio.'
-        elif not fecha:
+        if not fecha:
             error = 'Fecha de la factura es obligatoria.'
         elif not monto_total:
             error = 'Monto total es obligatorio.'
@@ -681,11 +677,12 @@ def create_receipt():
                 cur.execute(
                     """
                     INSERT INTO public.factura
-                        (numero_de_factura, fecha, monto_total, metodo_de_pago, numero_de_orden)
-                    VALUES (%s, %s, %s, %s, %s)
+                        (fecha, monto_total, metodo_de_pago, numero_de_orden)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING numero_de_factura
                     """,
                     (
-                        int(numero_factura), fecha, monto_total, metodo_pago,
+                        fecha, monto_total, metodo_pago,
                         int(numero_de_orden),
                     ),
                 )
@@ -694,7 +691,7 @@ def create_receipt():
                 return redirect(url_for('logistics.list_receipts'))
             except Exception:
                 db.rollback()
-                error = 'No se pudo registrar la factura. Verifica que el número no exista y la orden sea válida.'
+                error = 'No se pudo registrar la factura. Verifica que la orden sea válida.'
 
         flash(error, 'error')
 
@@ -880,18 +877,18 @@ def pay_order(order_id):
             error = 'Selecciona un método de pago.'
         if error is None:
             try:
-                cur.execute("SELECT COALESCE(MAX(numero_de_factura), 0) + 1 FROM public.factura")
-                next_invoice = cur.fetchone()[0]
                 cur.execute(
                     """
-                    INSERT INTO public.factura (numero_de_factura, fecha, monto_total, metodo_de_pago, numero_de_orden)
-                    VALUES (%s, CURRENT_DATE, %s, %s, %s)
+                    INSERT INTO public.factura (fecha, monto_total, metodo_de_pago, numero_de_orden)
+                    VALUES (CURRENT_DATE, %s, %s, %s)
+                    RETURNING numero_de_factura
                     """,
-                    (next_invoice, order_record.monto_base, metodo_pago, order_id),
+                    (order_record.monto_base, metodo_pago, order_id),
                 )
+                new_invoice = cur.fetchone()[0]
                 db.commit()
-                flash('Pago registrado correctamente. Se generó la factura N.º {}.'.format(next_invoice), 'success')
-                return redirect(url_for('logistics.receipt_detail', receipt_id=next_invoice))
+                flash('Pago registrado correctamente. Se generó la factura N.º {}.'.format(new_invoice), 'success')
+                return redirect(url_for('logistics.receipt_detail', receipt_id=new_invoice))
             except Exception:
                 db.rollback()
                 error = 'No se pudo procesar el pago. Intenta nuevamente.'
