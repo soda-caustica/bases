@@ -17,21 +17,38 @@
     <div><label>Cliente</label><p class="text-strong">{{ order.cliente_nombre }}</p></div>
     <div><label>Correo</label><p>{{ order.cliente_email or '-' }}</p></div>
     <div><label>Teléfono</label><p>{{ order.cliente_fono or '-' }}</p></div>
-    <div class="full-width"><label>Origen</label><p>{{ order.direccion_origen }}</p></div>
-    <div class="full-width"><label>Destino</label><p>{{ order.direccion_destino }}</p></div>
+    <div class="full-width"><label>Origen</label><p>{{ order.direccion_origen }}{% if order.comuna_origen_nombre %} (Comuna: {{ order.comuna_origen_nombre }}){% endif %}</p></div>
+    <div class="full-width"><label>Destino</label><p>{{ order.direccion_destino }}{% if order.comuna_destino_nombre %} (Comuna: {{ order.comuna_destino_nombre }}){% endif %}</p></div>
     <div><label>Monto base</label><p class="text-strong">${{ '{:,.0f}'.format(order.monto_base) }}</p></div>
     <div><label>Factura registrada</label><p>{{ 'Sí' if receipt else 'No' }}</p></div>
   </div>
 </div>
 
+{% if order.vehiculo_patente %}
+<div class="card panel" style="margin-bottom:16px;">
+  <h3>Vehículo a Retirar</h3>
+  <div class="form-grid" style="margin-bottom:0;">
+    <div><label>Patente</label><p class="text-strong mono">{{ order.vehiculo_patente }}</p></div>
+    <div><label>Tipo</label><p>{{ order.vehiculo_tipo }}</p></div>
+    <div><label>Estado en Logística</label><p><span class="badge {{ 'badge-completada' if order.vehiculo_estado == 'en_sucursal' else 'badge-en_proceso' }}">{{ order.vehiculo_estado.replace('_', ' ') }}</span></p></div>
+    <div class="full-width"><label>Observaciones / Detalles</label><p>{{ order.vehiculo_observacion or 'Sin observaciones' }}</p></div>
+  </div>
+</div>
+{% endif %}
+
 <div class="card panel" style="margin-bottom:16px;">
   <h3>Grúa y Chofer Asignados</h3>
   {% if dispatch %}
     <div class="form-grid" style="margin-bottom:0;">
+      <div><label>Código de Despacho</label><p class="text-strong mono">#{{ dispatch.id_retiro }}</p></div>
       <div><label>Grúa</label><p class="text-strong mono">{{ dispatch.patente_grua }}</p></div>
       <div><label>Chofer</label><p class="text-strong">{{ dispatch.chofer_nombre or dispatch.rut_chofer }}</p></div>
+      <div><label>Sucursal de Grúa</label><p>{{ dispatch.sucursal_nombre or '-' }}</p></div>
       <div><label>Fecha de despacho</label><p>{{ dispatch.fecha_hora }}</p></div>
       <div><label>Estado del despacho</label><p><span class="badge {{ 'badge-completada' if dispatch.retiro_estado == 'realizado' else 'badge-cancelada' }}">{{ dispatch.retiro_estado }}</span></p></div>
+      {% if dispatch.retiro_observacion %}
+      <div class="full-width"><label>Observaciones de Servicio</label><p>{{ dispatch.retiro_observacion }}</p></div>
+      {% endif %}
     </div>
   {% else %}
     <p style="font-size:13px; color:#64748b; margin:0 0 12px;">Esta orden todavía no tiene grúa ni chofer asignados (no había recursos disponibles).</p>

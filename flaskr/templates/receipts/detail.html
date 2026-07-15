@@ -50,7 +50,16 @@
     </thead>
     <tbody>
       <tr>
-        <td>Servicio de grúa — {{ invoice.direccion_origen }} → {{ invoice.direccion_destino }}</td>
+        <td>
+          Servicio de grúa para vehículo 
+          {% if invoice.vehiculo_patente %}<strong>{{ invoice.vehiculo_patente }}</strong> ({{ invoice.vehiculo_tipo }}){% else %}asociado{% endif %}
+          <br>
+          <span style="font-size:12px; color:#64748b;">
+            Desde: {{ invoice.direccion_origen }}{% if invoice.comuna_origen_nombre %} ({{ invoice.comuna_origen_nombre }}){% endif %}
+            <br>
+            Hacia: {{ invoice.direccion_destino }}{% if invoice.comuna_destino_nombre %} ({{ invoice.comuna_destino_nombre }}){% endif %}
+          </span>
+        </td>
         <td style="text-align:right; font-weight:500;">${{ '{:,.0f}'.format(subtotal) }}</td>
       </tr>
     </tbody>

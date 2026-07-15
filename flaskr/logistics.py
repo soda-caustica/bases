@@ -187,11 +187,15 @@ def _fetch_order_dispatch(cur, numero_de_orden):
     cur.execute(
         """
         SELECT r.id_retiro, r.fecha_hora, r.estado AS retiro_estado,
+               r.observacion_de_servicio AS retiro_observacion,
                gr.patente_grua, r.rut_chofer,
-               p.nombre AS chofer_nombre
+               p.nombre AS chofer_nombre,
+               s.nombre AS sucursal_nombre
         FROM public.retiro r
         JOIN public.grua_retiro gr ON gr.id_retiro = r.id_retiro
         LEFT JOIN public.persona p ON p.rut = r.rut_chofer
+        LEFT JOIN public.vehiculo v ON v.patente = gr.patente_grua
+        LEFT JOIN public.sucursal s ON s.id_sucursal = v.id_sucursal_esta
         WHERE r.numero_de_orden = %s
         ORDER BY r.fecha_hora DESC
         LIMIT 1
@@ -500,13 +504,23 @@ def order_detail(order_id):
                o.direccion_origen,
                o.direccion_destino,
                o.rut_cliente,
+               co.nombre AS comuna_origen_nombre,
+               cd.nombre AS comuna_destino_nombre,
                COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
                c.email AS cliente_email,
-               c.fono AS cliente_fono
+               c.fono AS cliente_fono,
+               vr.patente AS vehiculo_patente,
+               vr.tipo AS vehiculo_tipo,
+               vr.observacion AS vehiculo_observacion,
+               vr.estado AS vehiculo_estado
         FROM public.ordenderetiro o
         JOIN public.cliente c ON c.rut = o.rut_cliente
         LEFT JOIN public.persona p ON p.rut = c.rut
         LEFT JOIN public.empresa e ON e.rut = c.rut
+        LEFT JOIN public.comuna co ON co.id_comuna = o.id_comuna_origen
+        LEFT JOIN public.comuna cd ON cd.id_comuna = o.id_comuna_destino
+        LEFT JOIN public.vehiculoretirable_orden vro ON vro.numero_de_orden = o.numero_de_orden
+        LEFT JOIN public.vehiculoretirable vr ON vr.patente = vro.patente_vehiculo
         WHERE o.numero_de_orden = %s
         """,
         (order_id,),
@@ -746,13 +760,19 @@ def receipt_detail(receipt_id):
         """
         SELECT f.numero_de_factura, f.fecha, f.monto_total, f.metodo_de_pago, f.numero_de_orden,
                o.direccion_origen, o.direccion_destino, o.rut_cliente, o.estado AS orden_estado,
+               co.nombre AS comuna_origen_nombre, cd.nombre AS comuna_destino_nombre,
                COALESCE(p.nombre, e.razon_social, c.email, c.rut) AS cliente_nombre,
-               c.email AS cliente_email, c.fono AS cliente_fono
+               c.email AS cliente_email, c.fono AS cliente_fono,
+               vr.patente AS vehiculo_patente, vr.tipo AS vehiculo_tipo
         FROM public.factura f
         JOIN public.ordenderetiro o ON o.numero_de_orden = f.numero_de_orden
         JOIN public.cliente c ON c.rut = o.rut_cliente
         LEFT JOIN public.persona p ON p.rut = c.rut
         LEFT JOIN public.empresa e ON e.rut = c.rut
+        LEFT JOIN public.comuna co ON co.id_comuna = o.id_comuna_origen
+        LEFT JOIN public.comuna cd ON cd.id_comuna = o.id_comuna_destino
+        LEFT JOIN public.vehiculoretirable_orden vro ON vro.numero_de_orden = o.numero_de_orden
+        LEFT JOIN public.vehiculoretirable vr ON vr.patente = vro.patente_vehiculo
         WHERE f.numero_de_factura = %s
         """,
         (receipt_id,),
@@ -1108,6 +1128,32 @@ def list_gruas():
             'q': filtro_busqueda
         },
     )
+
+
+@bp.route('/gruas/<patente>/status', methods=('POST',))
+@admin_required
+def update_grua_status(patente):
+    db = get_db()
+    cur = db.cursor()
+    new_status = request.form.get('estado', '').strip()
+    valid_states = {'disponible', 'en_transito', 'mantenimiento'}
+
+    if new_status not in valid_states:
+        flash('Estado de grúa no válido.', 'error')
+        return redirect(url_for('logistics.list_gruas'))
+
+    try:
+        cur.execute(
+            "UPDATE public.grua SET estado = %s WHERE patente = %s",
+            (new_status, patente)
+        )
+        db.commit()
+        flash(f'Estado de la grúa {patente} actualizado a {new_status}.', 'success')
+    except Exception:
+        db.rollback()
+        flash('No se pudo actualizar el estado de la grúa.', 'error')
+
+    return redirect(url_for('logistics.list_gruas'))
 
 
 @bp.route('/employees')

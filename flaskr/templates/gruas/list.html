@@ -46,6 +46,17 @@
         </span>
       </div>
       <p style="margin:10px 0 0; font-size:12px; color:#94a3b8;">Comuna: {{ grua.comuna or '-' }}</p>
+
+      <form method="post" action="{{ url_for('logistics.update_grua_status', patente=grua.patente) }}" style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:12px; display:flex; gap:8px; align-items:center;">
+        <select name="estado" style="font-size:12px; padding:4px 8px; flex:1; height:30px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;">
+          <option value="disponible" {{ 'selected' if grua.estado == 'disponible' }}>Disponible</option>
+          <option value="en_transito" {{ 'selected' if grua.estado == 'en_transito' }}>En tránsito</option>
+          <option value="mantenimiento" {{ 'selected' if grua.estado == 'mantenimiento' }}>Mantenimiento</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" style="font-size:11px; padding:4px 8px; height:30px; line-height:1; white-space:nowrap; margin-top:0;">
+          Actualizar
+        </button>
+      </form>
     </div>
   {% else %}
     <p class="text-muted">No hay grúas que coincidan con los filtros.</p>
